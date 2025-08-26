@@ -5,6 +5,9 @@
 """
 
 
-def execute_workflow(workflow):
-    """ワークフローを実行する関数の例"""
-    pass
+class WorkflowExecutor:
+    """ワークフローの実行を担当するクラス"""
+
+    def execute(self, workflow):
+        """ワークフローを実行するメソッドの例"""
+        pass

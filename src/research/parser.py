@@ -5,6 +5,9 @@
 """
 
 
-def parse_input(input_data):
-    """入力データをパースする関数の例"""
-    pass
+class InputParser:
+    """入力データのパースを担当するクラス"""
+
+    def parse(self, input_data):
+        """入力データをパースするメソッドの例"""
+        pass

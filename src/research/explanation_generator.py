@@ -5,6 +5,9 @@
 """
 
 
-def generate_explanation(data):
-    """説明文を生成する関数の例"""
-    pass
+class ExplanationGenerator:
+    """説明文の生成を担当するクラス"""
+
+    def generate(self, data):
+        """説明文を生成するメソッドの例"""
+        pass

@@ -19,7 +19,9 @@ poetry install
 ### 3. 仮想環境の有効化
 
 ```bash
-poetry shell
+poetry env activate
+
+# 次に表示されたコマンドをコピーして実行
 ```
 
 ### 4. パッケージの追加
