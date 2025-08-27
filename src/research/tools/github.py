@@ -102,6 +102,10 @@ class GitHubAPIClient:
         ディレクトリが存在しない場合は何もしない。
         """
         import shutil
+        if not self.local_path:
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            print_result(result)
+            return result
         if not os.path.exists(self.local_path):
             result = RepoOpResult(status="not_found", message=f"{self.local_path} は存在しません。", path=self.local_path)
             print_result(result)
@@ -121,6 +125,10 @@ class GitHubAPIClient:
         指定したローカルリポジトリディレクトリに空ファイルを生成する。
         既にファイルが存在する場合は何もしない。
         """
+        if not self.local_path:
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            print_result(result)
+            return result
         file_path = os.path.join(self.local_path, filename)
         if os.path.exists(file_path):
             result = RepoOpResult(status="exists", message=f"{file_path} は既に存在します。", path=file_path)
@@ -143,7 +151,10 @@ class GitHubAPIClient:
         指定したローカルリポジトリディレクトリに空のYAMLファイルを生成する。
         既にファイルが存在する場合は何もしない。
         """
-        # file_pathはsrc/.github/workflows/配下に作成
+        if not self.local_path:
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            print_result(result)
+            return result
         file_path = os.path.join(self.local_path, ".github", "workflows", filename)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         if os.path.exists(file_path):
@@ -166,6 +177,10 @@ class GitHubAPIClient:
         """
         指定したローカルリポジトリディレクトリにファイルを書き込む。
         """
+        if not self.local_path:
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            print_result(result)
+            return result
         file_path = os.path.join(self.local_path, ".github", "workflows", filename)
         try:
             with open(file_path, "w") as f:
@@ -182,6 +197,10 @@ class GitHubAPIClient:
         """
         指定したローカルリポジトリディレクトリからファイルを削除する。
         """
+        if not self.local_path:
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            print_result(result)
+            return result
         file_path = os.path.join(self.local_path, ".github", "workflows", filename)
         if not os.path.exists(file_path):
             result = RepoOpResult(status="not_found", message=f"{file_path} は存在しません。", path=file_path)
@@ -274,6 +293,7 @@ class GitHubAPIClient:
             print_result(result)
             return result
         except subprocess.CalledProcessError as e:
+            self.local_path = None  # エラー時はlocal_pathをリセット
             result = RepoOpResult(status="error", message=str(e), path=local_dir)
             print_result(result)
             return result
@@ -281,7 +301,15 @@ class GitHubAPIClient:
     def create_working_branch(self, branch_name: str) -> RepoOpResult:
         """
         作業用ブランチを作成する。
+        self.local_pathが現在の開発リポジトリ（このプロジェクト自身）ならエラーにする。
+        local_pathがNoneの場合もエラーにする。
         """
+        dev_repo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+        local_path_abs = os.path.abspath(self.local_path) if self.local_path else None
+        if not local_path_abs:
+            return RepoOpResult(status="error", message="cloneに失敗しているため作業用ブランチを作成できません。", path=self.local_path)
+        if local_path_abs == dev_repo_path:
+            return RepoOpResult(status="error", message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。", path=self.local_path)
         try:
             subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.local_path, check=True)
             self.branch_name = branch_name
