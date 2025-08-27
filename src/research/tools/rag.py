@@ -6,11 +6,25 @@ WebやGitHubなどから情報を取得し、LLMに渡すための構造化デ�
 from typing import Any, Callable
 import os
 
-def _file_filter(file_path: str) -> bool:
-    # 指定した拡張子のファイルのみを読み込むフィルター関数
-    print(f"Checking file: {file_path}")
-    print("Filtering files with .mdx extension")
-    return file_path.endswith(".mdx")
+def file_filter_factory(allow_exts=None, deny_exts=None, allow_all=False):
+    """
+    柔軟なファイルフィルター関数を生成するファクトリー。
+    allow_exts: 許可する拡張子リスト（例: ['.md', '.py']）
+    deny_exts: 除外する拡張子リスト（例: ['.png', '.jpg']）
+    allow_all: Trueなら全て許可
+    戻り値: file_path:str -> bool な関数
+    """
+    def _filter(file_path: str) -> bool:
+        if allow_all:
+            return True
+        ext = os.path.splitext(file_path)[1].lower()
+        if deny_exts and ext in deny_exts:
+            return False
+        if allow_exts:
+            return ext in allow_exts
+        # デフォルトは.md, .mdx, .py, .txt, .jsonのみ許可
+        return ext in ['.md', '.mdx', '.py', '.txt', '.json']
+    return _filter
 
 def _git_loader(clone_url: str, repo_path: str, file_filter: Callable, branch: str = "master") -> list:
     """

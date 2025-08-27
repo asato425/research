@@ -1,19 +1,17 @@
 from research.tools.github import GitHubAPIClient
 
 def main():
-    client = GitHubAPIClient(repo_url="https://github.com/asato425/test")
+    client = GitHubAPIClient(repo_url="https://github.com/asato425/test1")
     
     result = client.clone_repository()
     print("Clone result:", result)
 
-    result = client.create_empty_file("summary.md")
-    print("Create empty file result:", result)
+    file_name = "test.py"
 
-    result = client.push_changes(message="Add summary.md")
-    print("Push changes result:", result)
-
-    result = client.delete_cloned_repository()
-    print("Delete cloned repository result:", result)
+    client.create_working_branch("feature/" + file_name)
+    client.create_yml_file(file_name)
+    client.push_changes(message="branch for " + file_name)
+    client.delete_cloned_repository()
 
 if __name__ == "__main__":
     main()
