@@ -27,7 +27,7 @@ class PushRequest(BaseModel):
 class PushResponse(BaseModel):
     status: str
     message: str
-    commit_sha: str | None = None
+    commit_sha: str | None = None # コミットSHA
 
 class RepoInfoRequest(BaseModel):
     repo_url: str = Field(..., description="情報取得したいGitHubリポジトリのURL")
