@@ -9,7 +9,7 @@ def main():
     result = client.create_empty_file("summary.md")
     print("Create empty file result:", result)
 
-    result = client.push_changes("Add summary.md")
+    result = client.push_changes(message="Add summary.md")
     print("Push changes result:", result)
 
     result = client.delete_cloned_repository()
