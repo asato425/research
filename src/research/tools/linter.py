@@ -19,7 +19,7 @@ class LintResult(BaseModel):
     error_message: Optional[str] = None
 
 
-class Linter:
+class LinterTool:
     @staticmethod
     def actionlint(local_path: str) -> LintResult:
         if not os.path.exists(local_path):
