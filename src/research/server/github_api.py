@@ -2,11 +2,14 @@
 FastAPIを用いたGitHub操作APIのサーバー側実装例。
 export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxをターミナルで実行しておく必要があります
 """
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
 import os
 import subprocess
 import shutil
+import time
+import logging
+import requests
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,6 +50,18 @@ class CloneResponse(BaseModel):
     message: str
     local_path: str | None = None
     repo_url: str | None = None
+
+class WorkflowRunRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHubリポジトリのURL")
+    commit_sha: str = Field(..., description="対象コミットのSHA")
+
+class WorkflowRunResponse(BaseModel):
+    status: str
+    message: str
+    conclusion: str | None = None
+    html_url: str | None = None
+    logs_url: str | None = None
+    failure_reason: str | None = None
 
 class BranchRequest(BaseModel):
     repo_path: str = Field(..., description="ローカルリポジトリのパス")
@@ -136,6 +151,113 @@ def push_changes(req: PushRequest):
         return PushResponse(status="error", message=str(e), commit_sha=None)
     except Exception as e:
         return PushResponse(status="error", message=str(e), commit_sha=None)
+
+
+@app.post("/workflow/latest", response_model=WorkflowRunResponse)
+def get_latest_workflow_logs(req: WorkflowRunRequest):
+    import os
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    # 環境変数からGitHubアクセストークンを取得
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return WorkflowRunResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+    # URLからowner/repo名を抽出
+    import re
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
+    if not m:
+        return WorkflowRunResponse(status="error", message="リポジトリURLの形式が不正です", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+    owner, repo = m.group(1), m.group(2)
+    url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=5"
+    try:
+        poll_count = 0
+        found = False
+        run = None
+        # 最大60回(=最大5分)までポーリング
+        while poll_count < 60:
+            resp = requests.get(url, headers=headers)
+            data = resp.json()
+            logging.info("------------------------------------------")
+            logging.info({"poll_count": poll_count})
+            if "workflow_runs" not in data or not data["workflow_runs"]:
+                time.sleep(5)
+                poll_count += 1
+                continue
+            # head_shaが一致するrunを探す
+            for r in data["workflow_runs"]:
+                if r.get("head_sha") == req.commit_sha:
+                    run = r
+                    found = True
+                    break
+            if found:
+                # 進行中なら完了まで待機
+                while run["status"] in ("in_progress", "queued") and poll_count < 60:
+                    time.sleep(5)
+                    resp = requests.get(url, headers=headers)
+                    data = resp.json()
+                    # head_shaが一致するrunを再取得
+                    run = None
+                    for r in data["workflow_runs"]:
+                        if r.get("head_sha") == req.commit_sha:
+                            run = r
+                            break
+                    if run is None:
+                        break
+                    poll_count += 1
+                break
+            else:
+                # head_sha一致するrunがまだ出てこない場合は少し待つ
+                time.sleep(5)
+                poll_count += 1
+        if not run:
+            return WorkflowRunResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+        logging.info("------------------------------------------")
+        logging.info("run: %s", run)
+        failure_reason = None
+        # 失敗時はlogs_urlからログを取得し、そのままfailure_reasonに格納（LLMで抽出するため）
+        if run["conclusion"] == "failure" and run.get("logs_url"):
+            try:
+                logs_resp = requests.get(run["logs_url"], headers=headers)
+                if logs_resp.status_code == 200:
+                    import zipfile
+                    import io
+                    import os
+                    z = zipfile.ZipFile(io.BytesIO(logs_resp.content))
+                    log_texts = []
+                    log_dir = os.path.join(os.getcwd(), "log")
+                    os.makedirs(log_dir, exist_ok=True)
+                    for name in z.namelist():
+                        if not ("test" in name.lower() or "run" in name.lower()):
+                            #continue
+                            pass
+                        with z.open(name) as f:
+                            try:
+                                content = f.read().decode(errors="ignore")
+                                log_texts.append(f"===== {name} =====\n{content}")
+                                # ファイルとして保存
+                                # file_path = os.path.join(log_dir, name.replace("/", "_"))
+                                # with open(file_path, "w", encoding="utf-8", errors="ignore") as out_f:
+                                #     out_f.write(content)
+                            except Exception:
+                                continue
+                    failure_reason = "\n\n".join(log_texts) if log_texts else "(No test/run logs found)"
+                else:
+                    failure_reason = f"Failed to fetch logs: {logs_resp.status_code}"
+            except Exception as ex:
+                failure_reason = f"Log parse error: {ex}"
+        return WorkflowRunResponse(
+            status=run["status"],
+            message="ワークフロー結果取得成功",
+            conclusion=run["conclusion"],
+            html_url=run["html_url"],
+            logs_url=run["logs_url"],
+            failure_reason=failure_reason
+        )
+    except Exception as e:
+        return WorkflowRunResponse(status="error", message=str(e), conclusion=None, html_url=None, logs_url=None, failure_reason=None)
 
 @app.get("/github/info", response_model=RepoInfoResponse)
 def get_repository_info(repo_url: str):

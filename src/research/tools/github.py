@@ -22,6 +22,14 @@ class PushResult(BaseModel):
     message: str
     commit_sha: str | None = None
 
+class WorkflowResult(BaseModel):
+    status: str
+    message: str
+    conclusion: str | None = None
+    html_url: str | None = None
+    logs_url: str | None = None
+    failure_reason: str | None = None
+
 class RepoInfoResult(BaseModel):
     status: str
     info: dict | None = None
@@ -50,7 +58,7 @@ def print_result(result):
     if hasattr(result, 'repo_url') and getattr(result, 'repo_url'):
         extra += f"\nrepo_url: {result.repo_url}"
     # 色分け
-    if status == 'success' or status == 'exists':
+    if status == 'success' or status == 'exists' or status == 'completed':
         label = '\033[92mSUCCESS\033[0m'  # 緑
     elif status == 'not_found':
         label = '\033[93mNOT FOUND\033[0m'  # 黄
@@ -117,6 +125,13 @@ class GitHubTool:
         payload = {"repo_path": local_path, "message": message}
         resp = requests.post(f"{self.base_url}/github/push", json=payload)
         result = PushResult(**resp.json())
+        print_result(result)
+        return result
+
+    def get_latest_workflow_logs(self, repo_url: str, commit_sha: str) -> WorkflowResult:
+        payload = {"repo_url": repo_url, "commit_sha": commit_sha}
+        resp = requests.post(f"{self.base_url}/workflow/latest", json=payload)
+        result = WorkflowResult(**resp.json())
         print_result(result)
         return result
 
