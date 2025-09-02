@@ -51,11 +51,11 @@ class CloneResponse(BaseModel):
     local_path: str | None = None
     repo_url: str | None = None
 
-class WorkflowRunRequest(BaseModel):
+class WorkflowRequest(BaseModel):
     repo_url: str = Field(..., description="GitHubリポジトリのURL")
     commit_sha: str = Field(..., description="対象コミットのSHA")
 
-class WorkflowRunResponse(BaseModel):
+class WorkflowResponse(BaseModel):
     status: str
     message: str
     conclusion: str | None = None
@@ -70,7 +70,7 @@ class BranchRequest(BaseModel):
 class FileRequest(BaseModel):
     repo_path: str = Field(..., description="ローカルリポジトリのパス")
     filename: str = Field(..., description="作成するファイル名")
-    content: str | None = Field(..., description="ファイルの内容")
+    content: str | None = Field(None, description="ファイルの内容")
 
 class DeleteRepoRequest(BaseModel):
     repo_path: str = Field(..., description="削除したいローカルリポジトリのパス")
@@ -98,7 +98,7 @@ def fork_repository(req: ForkRequest):
         repo_obj = g.get_repo(f"{owner}/{repo}")
         user = g.get_user()
         forked_repo = user.create_fork(repo_obj)
-        return ForkResponse(status="success", message=f"Forked {req.repo_url}", fork_url=forked_repo.html_url)
+        return ForkResponse(status="success", message=f" {req.repo_url}をforkしました", fork_url=forked_repo.html_url)
     except Exception as e:
         return ForkResponse(status="error", message=str(e), fork_url=None)
 
@@ -115,7 +115,7 @@ def clone_repository(req: CloneRequest):
         return CloneResponse(status="exists", message=f"{local_path} は既に存在します。", local_path=local_path, repo_url=repo_url)
     try:
         subprocess.run(["git", "clone", repo_url, local_path], check=True)
-        return CloneResponse(status="success", message=f"Cloned to {local_path}", local_path=local_path, repo_url=repo_url)
+        return CloneResponse(status="success", message=f"{local_path}のクローンに成功しました", local_path=local_path, repo_url=repo_url)
     except subprocess.CalledProcessError as e:
         return CloneResponse(status="error", message=str(e), local_path=local_path, repo_url=repo_url)
     except Exception as e:
@@ -131,30 +131,49 @@ def create_working_branch(req: BranchRequest):
         return RepoInfoResponse(status="error", info=None, message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。")
     try:
         subprocess.run(["git", "checkout", "-b", req.branch_name], cwd=req.repo_path, check=True)
-        return RepoInfoResponse(status="success", info=None, message=f"Created working branch: {req.branch_name}")
+        return RepoInfoResponse(status="success", info=None, message=f"{req.branch_name}を作成しました")
     except subprocess.CalledProcessError as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
 
 @app.post("/github/push", response_model=PushResponse)
-def push_changes(req: PushRequest):
+def commit_and_push(req: PushRequest):
     repo_dir = req.repo_path or os.getcwd()
     repo_dir = os.path.expanduser(repo_dir)
+    # add/commit
     try:
         subprocess.run(["git", "add", "."], cwd=repo_dir, check=True)
         subprocess.run(["git", "commit", "-m", req.message], cwd=repo_dir, check=True)
-        subprocess.run(["git", "push"], cwd=repo_dir, check=True)
-        commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, check=True, capture_output=True).stdout.decode().strip()
-        return PushResponse(status="success", message=f"Committed and pushed in {repo_dir}: {req.message}", commit_sha=commit_sha)
     except subprocess.CalledProcessError as e:
-        return PushResponse(status="error", message=str(e), commit_sha=None)
+        return PushResponse(status="error", message=f"コミットエラー: {str(e)}", commit_sha=None)
+
+    # 現在のブランチ名を取得
+    try:
+        res = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_dir, check=True, capture_output=True)
+        branch = res.stdout.decode().strip()
     except Exception as e:
-        return PushResponse(status="error", message=str(e), commit_sha=None)
+        return PushResponse(status="error", message=f"branch check error: {str(e)}", commit_sha=None)
+
+    # push（upstream未設定なら-u付きで再push）
+    try:
+        subprocess.run(["git", "push"], cwd=repo_dir, check=True)
+    except subprocess.CalledProcessError:
+        try:
+            subprocess.run(["git", "push", "-u", "origin", branch], cwd=repo_dir, check=True)
+        except subprocess.CalledProcessError as e:
+            return PushResponse(status="error", message=f"push error: {str(e)}", commit_sha=None)
+
+    # コミットハッシュ取得
+    try:
+        commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, check=True, capture_output=True).stdout.decode().strip()
+    except Exception:
+        commit_sha = None
+    return PushResponse(status="success", message=f"{branch}にコミットとプッシュをしました", commit_sha=commit_sha)
 
 
-@app.post("/workflow/latest", response_model=WorkflowRunResponse)
-def get_latest_workflow_logs(req: WorkflowRunRequest):
+@app.post("/workflow/latest", response_model=WorkflowResponse)
+def get_latest_workflow_logs(req: WorkflowRequest):
     import os
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     headers = {
@@ -164,12 +183,12 @@ def get_latest_workflow_logs(req: WorkflowRunRequest):
     # 環境変数からGitHubアクセストークンを取得
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        return WorkflowRunResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+        return WorkflowResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     # URLからowner/repo名を抽出
     import re
     m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
     if not m:
-        return WorkflowRunResponse(status="error", message="リポジトリURLの形式が不正です", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+        return WorkflowResponse(status="error", message="リポジトリURLの形式が不正です", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     owner, repo = m.group(1), m.group(2)
     url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=5"
     try:
@@ -213,7 +232,7 @@ def get_latest_workflow_logs(req: WorkflowRunRequest):
                 time.sleep(5)
                 poll_count += 1
         if not run:
-            return WorkflowRunResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+            return WorkflowResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
         logging.info("------------------------------------------")
         logging.info("run: %s", run)
         failure_reason = None
@@ -248,7 +267,7 @@ def get_latest_workflow_logs(req: WorkflowRunRequest):
                     failure_reason = f"Failed to fetch logs: {logs_resp.status_code}"
             except Exception as ex:
                 failure_reason = f"Log parse error: {ex}"
-        return WorkflowRunResponse(
+        return WorkflowResponse(
             status=run["status"],
             message="ワークフロー結果取得成功",
             conclusion=run["conclusion"],
@@ -257,12 +276,93 @@ def get_latest_workflow_logs(req: WorkflowRunRequest):
             failure_reason=failure_reason
         )
     except Exception as e:
-        return WorkflowRunResponse(status="error", message=str(e), conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+        return WorkflowResponse(status="error", message=str(e), conclusion=None, html_url=None, logs_url=None, failure_reason=None)
 
 @app.get("/github/info", response_model=RepoInfoResponse)
 def get_repository_info(repo_url: str):
-    # ここでリポジトリ情報取得処理を実装
-    return RepoInfoResponse(status="success", info={"info": f"Info for {repo_url}"})
+    """
+    指定したGitHubリポジトリの情報（説明、スター数、フォーク数、デフォルトブランチなど）を取得する。
+    """
+    import re
+    import os
+    import requests
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", repo_url)
+    if not m:
+        return RepoInfoResponse(status="error", info=None, message="リポジトリURLの形式が不正です")
+    owner, repo = m.group(1), m.group(2)
+
+    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+    topics_url = f"https://api.github.com/repos/{owner}/{repo}/topics"
+    # Git Trees API
+    trees_url = None
+
+    # 1. デフォルトブランチのSHA取得
+    try:
+        resp = requests.get(api_url, headers=headers)
+        if resp.status_code != 200:
+            return RepoInfoResponse(status="error", info=None, message=f"GitHub APIエラー: {resp.status_code}")
+        data = resp.json()
+        default_branch = data.get("default_branch")
+        # ブランチ情報取得
+        branch_url = f"https://api.github.com/repos/{owner}/{repo}/branches/{default_branch}"
+        branch_resp = requests.get(branch_url, headers=headers)
+        if branch_resp.status_code != 200:
+            return RepoInfoResponse(status="error", info=None, message=f"ブランチ情報取得エラー: {branch_resp.status_code}")
+        branch_data = branch_resp.json()
+        tree_sha = branch_data.get("commit", {}).get("commit", {}).get("tree", {}).get("sha")
+        if not tree_sha:
+            # fallback: 1階層のみ
+            trees_url = branch_data.get("commit", {}).get("commit", {}).get("url")
+        else:
+            trees_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1"
+    except Exception as e:
+        return RepoInfoResponse(status="error", info=None, message=f"Git Trees API準備エラー: {str(e)}")
+
+    # 2. topics
+    try:
+        topics_resp = requests.get(topics_url, headers={**headers, "Accept": "application/vnd.github.mercy-preview+json"})
+        topics = topics_resp.json().get("names", []) if topics_resp.status_code == 200 else []
+    except Exception:
+        topics = []
+
+    # 3. Git Trees APIで全ファイルパス一覧取得
+    file_tree = []
+    try:
+        if trees_url:
+            trees_resp = requests.get(trees_url, headers=headers)
+            if trees_resp.status_code == 200:
+                tree_data = trees_resp.json()
+                for item in tree_data.get("tree", []):
+                    file_tree.append({
+                        "path": item.get("path"),
+                        "type": item.get("type")  # "blob"=file, "tree"=dir
+                    })
+    except Exception:
+        pass
+
+    info = {
+        "full_name": data.get("full_name"),
+        "description": data.get("description"),
+        "stargazers_count": data.get("stargazers_count"),
+        "forks_count": data.get("forks_count"),
+        "open_issues_count": data.get("open_issues_count"),
+        "default_branch": data.get("default_branch"),
+        "html_url": data.get("html_url"),
+        "created_at": data.get("created_at"),
+        "updated_at": data.get("updated_at"),
+        "pushed_at": data.get("pushed_at"),
+        "language": data.get("language"),
+        "archived": data.get("archived"),
+        "disabled": data.get("disabled"),
+        "topics": topics,
+        "file_tree": file_tree,
+    }
+    return RepoInfoResponse(status="success", info=info, message="リポジトリ情報の取得が完了しました")
 
 @app.post("/github/create-empty-file", response_model=RepoInfoResponse)
 def create_empty_file(req: FileRequest):
@@ -273,7 +373,7 @@ def create_empty_file(req: FileRequest):
     try:
         with open(file_path, "w"):
             pass
-        return RepoInfoResponse(status="success", info=None, message=f"Created empty file: {file_path}")
+        return RepoInfoResponse(status="success", info=None, message=f"{file_path}を作成しました")
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
 
@@ -287,7 +387,7 @@ def create_yml_file(req: FileRequest):
     try:
         with open(file_path, "w"):
             pass
-        return RepoInfoResponse(status="success", info=None, message=f"Created empty file: {file_path}")
+        return RepoInfoResponse(status="success", info=None, message=f"{file_path}を作成しました")
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
 
@@ -298,7 +398,7 @@ def write_to_yml_file(req: FileRequest):
     try:
         with open(file_path, "w") as f:
             f.write(req.content or "")
-        return RepoInfoResponse(status="success", info=None, message=f"Wrote to file: {file_path}")
+        return RepoInfoResponse(status="success", info=None, message=f"{file_path}に書き込みました")
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
 
@@ -310,7 +410,7 @@ def delete_yml_file(req: FileRequest):
         return RepoInfoResponse(status="not_found", info=None, message=f"{file_path} は存在しません。")
     try:
         os.remove(file_path)
-        return RepoInfoResponse(status="success", info=None, message=f"Deleted file: {file_path}")
+        return RepoInfoResponse(status="success", info=None, message=f"{file_path}を削除しました")
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
 
@@ -322,6 +422,6 @@ def delete_cloned_repository(req: DeleteRepoRequest):
         return RepoInfoResponse(status="not_found", info=None, message=f"{req.repo_path} は存在しません。")
     try:
         shutil.rmtree(req.repo_path)
-        return RepoInfoResponse(status="success", info=None, message=f"Deleted: {req.repo_path}")
+        return RepoInfoResponse(status="success", info=None, message=f"{req.repo_path}を削除しました")
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=str(e))
