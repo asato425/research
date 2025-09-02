@@ -1,56 +1,60 @@
-from ..tools.github import WorkflowResult
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate
 from ..tools.llm import llm
+from ..tools.github import WorkflowResult
+from ..log_output.log import log
 
 class WorkflowLogParseResult(BaseModel):
-    status: str
-    message: str
-    error_details_yml: str | None = None
-    fix_suggestion_yml: str | None = None
-    error_details_other: str | None = None
-    fix_suggestion_other: str | None = None
+    error_details: str | None = Field(None, description="エラーの詳細")
 
-def workflow_log_parser(workflow_result: WorkflowResult, llm: llm = llm("gemini")) -> WorkflowLogParseResult:
+def workflow_log_parser(workflow_result: WorkflowResult, llm: llm = llm("gemini"), log_is: bool = True) -> WorkflowLogParseResult:
 	"""
 	WorkflowResult型の変数をLLMプロンプト用に整形し、
-	エラー内容と修正案をわかりやすく辞書形式で返す。
+	エラー内容をわかりやすく辞書形式で返す。
 	"""
-
-	status = workflow_result.conclusion
+	status = workflow_result.status
+	conclusion = workflow_result.conclusion
 	message = workflow_result.message
 	failure_reason = workflow_result.failure_reason
 
-	if status is None:
-		return WorkflowLogParseResult(
-			status="not_found",
-			message = f"ワークフロー結果が存在しません。{message or ''}",
-			error_details_yml=None,
-			fix_suggestion_yml=None,
-			error_details_other=None,
-			fix_suggestion_other=None
-		)
-	elif status == "success":
-		return WorkflowLogParseResult(
-			status="success",
-			message=f"ワークフロー結果は成功しました。{message or ''}",
-			error_details_yml=None,
-			fix_suggestion_yml=None,
-			error_details_other=None,
-			fix_suggestion_other=None
-		)
+	error_details = None
+
+	if conclusion is None:
+		error_details = f"ワークフロー結果が存在しません。{message or ''}"
+	elif conclusion == "success":
+		error_details = f"ワークフロー結果は成功したためエラーはありませんでした。{message or ''}"
 	else:
 		# failの場合
-		llm_prompt = (
-			"以下はGitHub Actionsのワークフロー実行結果です。"\
-			"エラー内容をymlファイル（.github/workflows/配下や拡張子がyml/yaml）に起因するものと、それ以外に分類してください。"\
-			"statusはymlファイルを修正する必要のあるエラーがあれば'fail'、ymlファイルを修正する必要がなければ'success'としてください。"\
-			"それぞれについて、エラー内容（日本語で要約）と修正案（日本語で具体的に）を出力してください。修正案はymlファイルを修正する内容にしてください"\
-			"messageにはエラーの内容を簡潔にまとめてください。"\
-			f"\n---\nワークフロー実行結果: {status}\nメッセージ: {message}\n失敗理由: {failure_reason}\n"
+		prompt = ChatPromptTemplate.from_messages(
+			[
+				(
+					"system",
+					"あなたは日本のソフトウェア開発の専門家です。GitHub Actionsワークフローの実行結果を解析し、エラーの詳細や修正案をすべて日本語でわかりやすく要約・提案してください。エラー詳細（error_details_yml, error_details_other）も必ず日本語で要約してください。",
+				),
+				(
+					"human",
+					"以下のGitHub Actionsのワークフロー実行結果に基づいてエラーがあればそのエラーの詳細と修正案を考えてください。\n"
+					"ワークフローの実行状態: {status}\n"
+					"ワークフローの実行結果: {conclusion}\n"
+					"ワークフロー実行結果の内容: {message}\n"
+					"ワークフロー実行の失敗理由: {failure_reason}\n"
+				)
+			]
 		)
-		result = llm.with_structured_output(WorkflowLogParseResult).invoke(llm_prompt)
+		chain = prompt | llm.with_structured_output(WorkflowLogParseResult)
 
-		if result.error_details_yml is None:
-			result.status = "success"
+		log(conclusion, f"ワークフロー実行ログパーサー結果: {error_details}", log_is)
+		return chain.invoke(
+			{
+				"status": status,
+				"conclusion": conclusion,
+				"message": message,
+				"failure_reason": failure_reason,
+			}
+		)
 
-		return result
+	log(conclusion, f"ワークフロー実行ログパーサー結果: {error_details or 'No error details'}", log_is)
+
+	return WorkflowLogParseResult(
+		error_details=error_details
+	)
