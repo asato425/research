@@ -29,11 +29,11 @@ def workflow_log_parser(workflow_result: WorkflowResult, llm: llm = llm("gemini"
 			[
 				(
 					"system",
-					"あなたは日本のソフトウェア開発の専門家です。GitHub Actionsワークフローの実行結果を解析し、エラーの詳細や修正案をすべて日本語でわかりやすく要約・提案してください。エラー詳細（error_details_yml, error_details_other）も必ず日本語で要約してください。",
+					"あなたは日本のソフトウェア開発の専門家です。",
 				),
 				(
 					"human",
-					"以下のGitHub Actionsのワークフロー実行結果に基づいてエラーがあればそのエラーの詳細と修正案を考えてください。\n"
+					"以下のGitHub Actionsのワークフロー実行結果に基づいてエラーがあればそのエラーの詳細をわかりやすく教えてください。\n"
 					"ワークフローの実行状態: {status}\n"
 					"ワークフローの実行結果: {conclusion}\n"
 					"ワークフロー実行結果の内容: {message}\n"
