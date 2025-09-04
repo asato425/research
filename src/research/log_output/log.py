@@ -1,25 +1,59 @@
-# ログ出力用の関数を実装
 
-str_futoji = "\033[1m"
-str_kasen = "\033[4m"
-str_red = "\033[31m"    # バグ、エラーの出力用
-str_green = "\033[32m"
-str_yellow = "\033[33m" # 警告を示すもの
-str_blue = "\033[34m"
-str_magenta = "\033[35m"
-str_cyan = "\033[36m"
-str_reset = "\033[0m"
+import logging
+import sys
 
-def log(status: str, message: str, log_is: bool=True) -> None:
+class ColorFormatter(logging.Formatter):
+    COLOR_MAP = {
+        "SUCCESS": "\033[32m",
+        "WARNING": "\033[33m",
+        "INFO": "\033[34m",
+        "ERROR": "\033[31m",
+        "FAIL": "\033[31m",
+    }
+    STR_BOLD = "\033[1m"
+    STR_RESET = "\033[0m"
+
+    def format(self, record):
+        levelname = record.levelname
+        color = self.COLOR_MAP.get(levelname, "\033[31m")
+        msg = super().format(record)
+        return f"{self.STR_BOLD}{color}(LOG){levelname}: {msg}{self.STR_RESET}"
+
+# ロガー設定
+logger = logging.getLogger("research")
+handler = logging.StreamHandler(sys.stdout)
+formatter = ColorFormatter("%(message)s")
+handler.setFormatter(formatter)
+logger.handlers = [handler]
+logger.setLevel(logging.INFO)
+
+def log(status: str, message: str, log_is: bool = True) -> None:
     """
-    ログメッセージを出力する関数
+    loggingモジュールを使ったログ出力関数
+    status: success/info/warning/error/fail など
     """
-    if log_is:
-        if status == "success":
-            print(f"{str_futoji}{str_green}(LOG){status}: {message}{str_reset}")
-        elif status == "warning":
-            print(f"{str_futoji}{str_yellow}(LOG){status}: {message}{str_reset}")
-        elif status == "info":
-            print(f"{str_futoji}{str_blue}(LOG){status}: {message}{str_reset}")
-        else:
-            print(f"{str_futoji}{str_red}(LOG){status}: {message}{str_reset}")
+    if not log_is:
+        return
+    # status→levelname変換
+    level_map = {
+        "success": "SUCCESS",
+        "info": "INFO",
+        "warning": "WARNING",
+        "error": "ERROR",
+        "fail": "FAIL",
+    }
+    levelname = level_map.get(status.lower(), "ERROR")
+    # カスタムレベル追加（SUCCESS, FAIL）
+    if not hasattr(logging, levelname):
+        logging.addLevelName(25, "SUCCESS")
+        logging.addLevelName(35, "FAIL")
+    if levelname == "SUCCESS":
+        logger.log(25, message)
+    elif levelname == "FAIL":
+        logger.log(35, message)
+    elif levelname == "INFO":
+        logger.info(message)
+    elif levelname == "WARNING":
+        logger.warning(message)
+    else:
+        logger.error(message)
