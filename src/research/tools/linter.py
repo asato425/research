@@ -3,7 +3,6 @@ from typing import Any
 import subprocess
 import os
 import json
-from typing import Optional
 from ..log_output.log import log
 
 class LintResult(BaseModel):
@@ -22,9 +21,17 @@ class LintResult(BaseModel):
 
 class LinterTool:
     def __init__(self, log_is: bool = True):
+        """
+        Returns:
+            None
+        """
         self.log_is = log_is
 
     def actionlint(self, local_path: str) -> LintResult:
+        """
+        Returns:
+            LintResult: local_path(str|None), raw_output(Any), status(str|None), error_message(str|None)
+        """
         if not os.path.exists(local_path):
             result = LintResult(
                 local_path=local_path,
@@ -73,6 +80,9 @@ class LinterTool:
         """
         ghalintの出力をそのままprintし、返り値はLintResult（raw_outputのみセット）
         status: None=未実行, success=エラーなし, fail=lintエラー, linter_error=コマンド実行失敗
+
+        Returns:
+            LintResult: local_path(str|None), raw_output(Any), status(str|None), error_message(str|None)
         """
         if not os.path.exists(local_path):
             result = LintResult(
