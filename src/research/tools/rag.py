@@ -2,7 +2,6 @@
 RAG（Retrieval-Augmented Generation）関連の処理をまとめるモジュール。
 WebやGitHubなどから情報を取得し、LLMに渡すための構造化データを生成する関数やクラスを実装。
 """
-
 from typing import Any, Callable
 import os
 from ..log_output.log import log
