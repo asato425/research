@@ -5,6 +5,7 @@ WebやGitHubなどから情報を取得し、LLMに渡すための構造化デ�
 
 from typing import Any, Callable
 import os
+from ..log_output.log import log
 
 class RAGTool:
     """
@@ -33,6 +34,7 @@ class RAGTool:
                 return ext in allow_exts
             # デフォルトは.md, .mdx, .py, .txt, .jsonのみ許可
             return ext in ['.md', '.mdx', '.py', '.txt', '.json']
+        log("info", f"ファイルフィルターを生成しました。\nallow_exts={allow_exts}, \ndeny_exts={deny_exts}, \nallow_all={allow_all}", True)
         return _filter
 
     def _git_loader(self, clone_url: str, repo_path: str, file_filter: Callable, branch: str = "master") -> list:
@@ -44,7 +46,7 @@ class RAGTool:
         from langchain.schema import Document
 
         if os.path.exists(repo_path):
-            print(f"Repository already exists at {repo_path}. Loading documents...")
+            log("info", f"リポジトリが既に存在します。{repo_path}からドキュメントを読み込みます。", True)
             raw_docs = []
             for root, dirs, files in os.walk(repo_path):
                 for file_name in files:
@@ -55,9 +57,9 @@ class RAGTool:
                                 content = f.read()
                                 raw_docs.append(Document(page_content=content, metadata={"source": file_path}))
                         except Exception as e:
-                            print(f"Error reading {file_path}: {e}")
+                            log("error", f"Error reading {file_path}: {e}", True)
         else:
-            print(f"Cloning repository from {clone_url}...")
+            log("info", f"{clone_url}からリポジトリをクローンします。", True)
             loader = GitLoader(
                 clone_url=clone_url,
                 repo_path=repo_path,
@@ -65,14 +67,14 @@ class RAGTool:
                 file_filter=file_filter,
             )
             raw_docs = loader.load()
-        print(f"Loaded {len(raw_docs)} documents.")
+        log("info", f"{len(raw_docs)}個のドキュメントを読み込みました。", True)
         return raw_docs
 
     def _web_loader(self, url: str) -> list:
         from langchain_community.document_loaders import WebBaseLoader
         loader = WebBaseLoader(url)
         raw_docs = loader.load()
-        print(f"Loaded {len(raw_docs)} documents from {url}")
+        log("info", f"{len(raw_docs)}個のドキュメントを読み込みました。", True)
         def ensure_str_content(docs):
             for doc in docs:
                 if isinstance(doc.page_content, dict):
@@ -82,7 +84,7 @@ class RAGTool:
 
     def _document_transformer(self, raw_docs: list, chunk_size=1000, chunk_overlap=0) -> list:
         from langchain_text_splitters import CharacterTextSplitter
-        print(f"Using CharacterTextSplitter with chunk_size={chunk_size} and chunk_overlap={chunk_overlap}")
+        log("info", f"CharacterTextSplitterを使用します。chunk_size={chunk_size}, chunk_overlap={chunk_overlap}", True)
         text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         docs = text_splitter.split_documents(raw_docs)
         return docs
@@ -96,12 +98,16 @@ class RAGTool:
         elif self.embedding_model == "gpt":
             embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         else:
+            log("error", f"Embeddingモデル '{self.embedding_model}' はサポートされていません。", True)
             raise ValueError("model_nameは 'gemini' または 'gpt' のみ指定可能です")
+
+        log("info", f"Embeddingモデル '{self.embedding_model}' を使用します。", True)
         return embeddings
 
     def _save(self, docs: list, embeddings) -> Any:
         from langchain_community.vectorstores import Chroma
         db = Chroma.from_documents(docs, embeddings)
+        log("info", f"ベクトルストアに {len(docs)} 個のドキュメントを保存しました。", True)
         return db
 
     def rag_git(self, clone_url: str, repo_path: str, file_filter: Callable, branch: str = "main"):
@@ -110,6 +116,7 @@ class RAGTool:
         embeddings_model = self._embedding()
         db = self._save(docs, embeddings_model)
         retriever = db.as_retriever()
+        log("info", f"GitHubリポジトリ{repo_path}のretrieverを作成しました。", True)
         return retriever
 
     def rag_web(self, url: str):
@@ -118,5 +125,6 @@ class RAGTool:
         embeddings_model = self._embedding()
         db = self._save(docs, embeddings_model)
         retriever = db.as_retriever()
+        log("info", f"{url}のretrieverを作成しました。", True)
         return retriever
 
