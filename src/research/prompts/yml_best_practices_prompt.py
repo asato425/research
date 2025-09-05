@@ -1,3 +1,6 @@
+'''
+LLMを使用して、特定のプログラミング言語におけるGitHub Actionsのymlベストプラクティスを取得します。
+'''
 from ..tools.llm import LLMTool
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
