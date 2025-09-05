@@ -2,6 +2,7 @@
 LLMを使用して、特定のプログラミング言語におけるGitHub Actionsのymlベストプラクティスを取得します。
 '''
 from ..tools.llm import LLMTool
+from ..log_output.log import log
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -18,12 +19,16 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "{programming_language}でGitHub Actionsのワークフローを作成する際のベストプラクティス・推奨事項・yml記述上の注意点・よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、箇条書きで10個詳しく教えてください。"
+            "{programming_language}でGitHub Actionsのワークフローを作成する際のベストプラクティス・推奨事項・yml記述上の注意点・よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、箇条書きで{num}個詳しく教えてください。"
         )
     ]
 )
-def get_yml_best_practices(programming_language:str):
+def get_yml_best_practices(programming_language:str, num:int = 10, log_is:bool = True):
+    '''
+    Return
+        GitHub Actionsのymlベストプラクティス
+    '''
     chain = prompt | llm | StrOutputParser()
-    return chain.invoke({"programming_language": programming_language})
-
-
+    result = chain.invoke({"programming_language": programming_language, "num": num})
+    log("info", f"{programming_language}プロジェクトのGitHub Actionsのymlベストプラクティスを{num}個取得しました。", log_is)
+    return result

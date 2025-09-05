@@ -1,5 +1,5 @@
 # ymlファイルを書くうえでのルールを記述したプロンプトをまとめてください
-
+from ..log_output.log import log
 YML_RULES = """
 - インデントはスペース2つ
 - コメントは#で始める
@@ -8,5 +8,6 @@ YML_RULES = """
 - ...
 """
     
-def get_yml_rules():
+def get_yml_rules(log_is:bool = True):
+    log("info", "GitHub Actionsのyml記述ルールを取得しました。", log_is)
     return YML_RULES
