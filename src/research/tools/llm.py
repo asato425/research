@@ -36,7 +36,15 @@ class LLMTool:
             log("error", f"モデル '{model_name}' はサポートされていません。", self.log_is)
             raise ValueError(f"model_nameは {list(models.keys())} のみ指定可能です")
 
-    def create_agent(self, model_name: str = "gemini", temperature: float = 0.0, output_model: any = None, tools: list[Tool] = []) -> AgentExecutor:
+    def create_agent(
+        self, 
+        model_name: str = "gpt-4", 
+        temperature: float = 0.0, 
+        output_model: any = None, 
+        tools: list[Tool] = [], 
+        prompt: ChatPromptTemplate = None,
+        max_iterations: int = 5
+    ) -> AgentExecutor:
         """
         Returns:
             AgentExecutor: LangChainのエージェント実行インスタンス
@@ -50,15 +58,12 @@ class LLMTool:
         agent = create_openai_functions_agent(
             llm=llm,
             tools=tools,
-            prompt=ChatPromptTemplate.from_messages([
-                ("system", "あなたは優秀なAIエージェントです。"),
-                ("human", "{input}\n\n{agent_scratchpad}")
-            ])
+            prompt=prompt
         )
         agent_executor = AgentExecutor(
             agent=agent, 
             tools=tools, 
-            max_iterations=3,
+            max_iterations=max_iterations,
             verbose=True
         )
         return agent_executor
