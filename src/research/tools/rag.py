@@ -16,7 +16,6 @@ class RAGTool:
         self.embedding_model = embedding_model
         self.log_is = log_is
 
-    @staticmethod
     def file_filter_factory(self, allow_exts=None, deny_exts=None, allow_all=False):
         """
         柔軟なファイルフィルター関数を生成するファクトリー。
@@ -38,7 +37,7 @@ class RAGTool:
         log("info", f"ファイルフィルターを生成しました。\nallow_exts={allow_exts}, \ndeny_exts={deny_exts}, \nallow_all={allow_all}", self.log_is)
         return _filter
 
-    def _git_loader(self, clone_url: str, repo_path: str, file_filter: Callable, branch: str = "master") -> list:
+    def _git_loader(self, clone_url: str, local_path: str, file_filter: Callable, branch: str = "master") -> list:
         """
         指定したGitリポジトリからドキュメントを読み込む関数。
         すでにローカルにリポジトリが存在する場合はクローンせずに読み込みます。
@@ -46,10 +45,10 @@ class RAGTool:
         from langchain_community.document_loaders import GitLoader
         from langchain.schema import Document
 
-        if os.path.exists(repo_path):
-            log("info", f"リポジトリが既に存在します。{repo_path}からドキュメントを読み込みます。", self.log_is)
+        if os.path.exists(local_path):
+            log("info", f"リポジトリが既に存在します。{local_path}からドキュメントを読み込みます。", self.log_is)
             raw_docs = []
-            for root, dirs, files in os.walk(repo_path):
+            for root, dirs, files in os.walk(local_path):
                 for file_name in files:
                     file_path = os.path.join(root, file_name)
                     if file_filter(file_path):
@@ -63,7 +62,7 @@ class RAGTool:
             log("info", f"{clone_url}からリポジトリをクローンします。", self.log_is)
             loader = GitLoader(
                 clone_url=clone_url,
-                repo_path=repo_path,
+                repo_path=local_path,
                 branch=branch,
                 file_filter=file_filter,
             )
@@ -111,18 +110,18 @@ class RAGTool:
         log("info", f"ベクトルストアに {len(docs)} 個のドキュメントを保存しました。", self.log_is)
         return db
 
-    def rag_git(self, clone_url: str, repo_path: str, file_filter: Callable, branch: str = "main"):
+    def rag_git(self, clone_url: str, local_path: str, file_filter: Callable, branch: str = "main"):
         '''
         Gitリポジトリからドキュメントを読み込み、RAG用のRetrieverを作成します。
         Return:
             Retriever
         '''
-        raw_docs = self._git_loader(clone_url, repo_path, file_filter, branch)
+        raw_docs = self._git_loader(clone_url, local_path, file_filter, branch)
         docs = self._document_transformer(raw_docs)
         embeddings_model = self._embedding()
         db = self._save(docs, embeddings_model)
         retriever = db.as_retriever()
-        log("info", f"GitHubリポジトリ{repo_path}のretrieverを作成しました。", self.log_is)
+        log("info", f"GitHubリポジトリ{clone_url}のretrieverを作成しました。", self.log_is)
         return retriever
 
     def rag_web(self, url: str):
