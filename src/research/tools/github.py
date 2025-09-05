@@ -207,12 +207,12 @@ class GitHubTool:
         log(result.status, result.message, self.log_is)
         return result
 
-    def create_yml_file(self, local_path: str, filename: str) -> RepoOpResult:
+    def create_file(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         Returns:
             RepoOpResult: status(str), message(str), path(str|None)
         """
-        file_path = os.path.join(local_path, ".github", "workflows", filename)
+        file_path = os.path.join(local_path, relative_path)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         if os.path.exists(file_path):
             result = RepoInfoResult(status="success", info=None, message=f"{file_path} は既に存在します。")
@@ -228,12 +228,12 @@ class GitHubTool:
         log(result.status, result.message, self.log_is)
         return result
 
-    def write_to_yml_file(self, local_path: str, filename: str, content: str) -> RepoOpResult:
+    def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoOpResult:
         """
         Returns:
             RepoOpResult: status(str), message(str), path(str|None)
         """
-        file_path = os.path.join(local_path, ".github", "workflows", filename)
+        file_path = os.path.join(local_path, relative_path)
         try:
             with open(file_path, "w") as f:
                 f.write(content or "")
@@ -243,13 +243,13 @@ class GitHubTool:
 
         log(result.status, result.message, self.log_is)
         return result
-   
-    def delete_yml_file(self, local_path: str, filename: str) -> RepoOpResult:
+
+    def delete_file(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         Returns:
             RepoOpResult: status(str), message(str), path(str|None)
         """
-        file_path = os.path.join(local_path, ".github", "workflows", filename)
+        file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
             result = RepoInfoResult(status="not_found", info=None, message=f"{file_path} は存在しません。")
             return result
@@ -285,12 +285,12 @@ class GitHubTool:
             log(result.status, result.message, self.log_is) 
             return result
 
-    def read_file(self, local_path: str, filename: str) -> RepoOpResult:
+    def read_file(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         Returns:
             RepoInfoResult: status(str), info(dict|None), message(str)
         """
-        file_path = os.path.join(local_path, filename)
+        file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
             result = RepoInfoResult(status="not_found", info=None, message=f"{file_path} は存在しないため読み込めません。")
             log(result.status, result.message, self.log_is)

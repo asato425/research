@@ -72,14 +72,13 @@ def fork_repository(req: ForkRequest):
 def get_latest_workflow_logs(req: WorkflowRequest):
     import os
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    # 環境変数からGitHubアクセストークンを取得
+    if not GITHUB_TOKEN:
+        return WorkflowResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
     }
-    # 環境変数からGitHubアクセストークンを取得
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        return WorkflowResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     # URLからowner/repo名を抽出
     import re
     m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
@@ -183,6 +182,8 @@ def get_repository_info(repo_url: str):
     import os
     import requests
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    if not GITHUB_TOKEN:
+        return RepoInfoResponse(status="error", info=None, message="GITHUB_TOKENが設定されていません")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -194,8 +195,6 @@ def get_repository_info(repo_url: str):
 
     api_url = f"https://api.github.com/repos/{owner}/{repo}"
     topics_url = f"https://api.github.com/repos/{owner}/{repo}/topics"
-    # Git Trees API
-    trees_url = None
 
     # 1. デフォルトブランチのSHA取得
     try:
@@ -209,37 +208,14 @@ def get_repository_info(repo_url: str):
         branch_resp = requests.get(branch_url, headers=headers)
         if branch_resp.status_code != 200:
             return RepoInfoResponse(status="error", info=None, message=f"ブランチ情報取得エラー: {branch_resp.status_code}")
-        branch_data = branch_resp.json()
-        tree_sha = branch_data.get("commit", {}).get("commit", {}).get("tree", {}).get("sha")
-        if not tree_sha:
-            # fallback: 1階層のみ
-            trees_url = branch_data.get("commit", {}).get("commit", {}).get("url")
-        else:
-            trees_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1"
     except Exception as e:
         return RepoInfoResponse(status="error", info=None, message=f"Git Trees API準備エラー: {str(e)}")
-
     # 2. topics
     try:
         topics_resp = requests.get(topics_url, headers={**headers, "Accept": "application/vnd.github.mercy-preview+json"})
         topics = topics_resp.json().get("names", []) if topics_resp.status_code == 200 else []
     except Exception:
         topics = []
-
-    # 3. Git Trees APIで全ファイルパス一覧取得
-    file_tree = []
-    try:
-        if trees_url:
-            trees_resp = requests.get(trees_url, headers=headers)
-            if trees_resp.status_code == 200:
-                tree_data = trees_resp.json()
-                for item in tree_data.get("tree", []):
-                    file_tree.append({
-                        "path": item.get("path"),
-                        "type": item.get("type")  # "blob"=file, "tree"=dir
-                    })
-    except Exception:
-        pass
 
     info = {
         "full_name": data.get("full_name"),
@@ -256,7 +232,6 @@ def get_repository_info(repo_url: str):
         "archived": data.get("archived"),
         "disabled": data.get("disabled"),
         "topics": topics,
-        "file_tree": file_tree,
     }
     return RepoInfoResponse(status="success", info=info, message="リポジトリ情報の取得が完了しました")
 
