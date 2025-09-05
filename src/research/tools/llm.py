@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import Tool
 from langchain.tools.retriever import create_retriever_tool
 from langchain.agents import create_openai_functions_agent, AgentExecutor
@@ -46,8 +47,20 @@ class LLMTool:
             raise ValueError("create_agentはgpt系モデルのみ対応です")
         log("info", f"LLMエージェントを作成します。利用可能なツールは {tools} です。出力形式は {output_model} です。", self.log_is)
         llm = self.create_model(model_name=model_name, temperature=temperature, output_model=output_model)
-        agent = create_openai_functions_agent(llm, tools)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent = create_openai_functions_agent(
+            llm=llm,
+            tools=tools,
+            prompt=ChatPromptTemplate.from_messages([
+                ("system", "あなたは優秀なAIエージェントです。"),
+                ("human", "{input}\n\n{agent_scratchpad}")
+            ])
+        )
+        agent_executor = AgentExecutor(
+            agent=agent, 
+            tools=tools, 
+            max_iterations=3,
+            verbose=True
+        )
         return agent_executor
 
     def retriever_to_tool(self, retriever: any, retriever_name: str, description: str) -> Tool:
