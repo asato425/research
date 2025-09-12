@@ -6,17 +6,16 @@ from ..tools.github import WorkflowResult
 from ..tools.linter import LintResult
 
 class ParseResult(BaseModel):
-    error_details: str | None = Field(None, description="エラーの詳細")
+    parse_details: str | None = Field(None, description="パースの詳細")
 
 
 class ParserTool:
-    def __init__(self, llm: llm = llm("gemini"), log_is: bool = True):
+    def __init__(self, llm: llm = llm("gemini")):
         """
         Returns:
             None
         """
         self.llm = llm.with_structured_output(ParseResult)
-        self.log_is = log_is
 
     def workflow_log_parse(self, workflow_result: WorkflowResult) -> ParseResult:
 
@@ -33,12 +32,12 @@ class ParserTool:
         message = workflow_result.message
         failure_reason = workflow_result.failure_reason
 
-        error_details = None
+        parse_details = None
 
         if conclusion is None:
-            error_details = f"ワークフロー結果が存在しません。{message or ''}"
+            parse_details = f"ワークフロー結果が存在しません。{message or ''}"
         elif conclusion == "success":
-            error_details = f"ワークフロー結果は成功したためエラーはありませんでした。{message or ''}"
+            parse_details = f"ワークフロー結果は成功したためエラーはありませんでした。{message or ''}"
         else:
             # failの場合
             prompt = ChatPromptTemplate.from_messages(
@@ -59,7 +58,7 @@ class ParserTool:
             )
             chain = prompt | llm
 
-            log(conclusion, f"ワークフロー実行ログパーサー結果: {error_details}", self.log_is)
+            log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details}")
             return chain.invoke(
                 {
                     "status": status,
@@ -69,10 +68,10 @@ class ParserTool:
                 }
             )
 
-        log(conclusion, f"ワークフロー実行ログパーサー結果: {error_details or 'No error details'}", self.log_is)
+        log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details or 'No parse details'}")
 
         return ParseResult(
-            error_details=error_details
+            parse_details=parse_details
         )
 
     def lint_result_parse(self, lint_result: LintResult) -> ParseResult:
@@ -89,14 +88,14 @@ class ParserTool:
         error_message = lint_result.error_message
         raw_output = lint_result.raw_output
 
-        error_details = None
+        parse_details = None
 
         if status is None:
-            error_details = f"Lint未実行または対象ディレクトリが存在しません。{error_message or ''}"
+            parse_details = f"Lint未実行または対象ディレクトリが存在しません。{error_message or ''}"
         elif status == "linter_error":
-            error_details = f"Linter自体の実行に失敗しました。エラーメッセージ: {error_message or ''}"
+            parse_details = f"Linter自体の実行に失敗しました。エラーメッセージ: {error_message or ''}"
         elif status == "success":
-            error_details = "Lint結果: 問題は検出されませんでした。"
+            parse_details = "Lint結果: 問題は検出されませんでした。"
         else:
             # failの場合
             llm_prompt = ChatPromptTemplate.from_messages(
@@ -123,12 +122,12 @@ class ParserTool:
                 "error_message": error_message,
                 "raw_output": raw_output
             })
-            log("info", f"Lintパーサー結果: {result.error_details}", self.log_is)
+            log("info", f"Lintパーサー結果: {result.error_details}")
             return result
 
-        log("info", f"Lintパーサー結果: {error_details or 'No error details'}", self.log_is)
+        log("info", f"Lintパーサー結果: {parse_details or 'No parse details'}")
         return ParseResult(
-            error_details=error_details,
+            parse_details=parse_details,
         )
 
     def repo_info_parse(self) -> ParseResult:
@@ -140,5 +139,5 @@ class ParserTool:
         """
         # ここにリポジトリ情報のパース処理を実装
         return ParseResult(
-            error_details=None
+            parse_details=None
         )

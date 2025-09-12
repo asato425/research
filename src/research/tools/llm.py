@@ -14,8 +14,8 @@ class LLMTool:
     LLM（大規模言語モデル）のインスタンス生成をクラス化し、
     異なる種類のLLMでも同じインターフェースで呼び出せるようにするためのファイル。
     """
-    def __init__(self, log_is: bool = True):
-        self.log_is = log_is
+    def __init__(self):
+        pass
 
     def create_model(self, model_name: str = "gemini", temperature: float = 0.0, output_model: any = None) -> any:
         """
@@ -30,10 +30,10 @@ class LLMTool:
             # ここに新しいモデルを追加可能
         }
         try:
-            log("info", f"LLMモデル '{model_name}' を作成します。", self.log_is)
+            log("info", f"LLMモデル '{model_name}' を作成します。")
             return models[model_name]()
         except KeyError:
-            log("error", f"モデル '{model_name}' はサポートされていません。", self.log_is)
+            log("error", f"モデル '{model_name}' はサポートされていません。")
             raise ValueError(f"model_nameは {list(models.keys())} のみ指定可能です")
 
     def create_agent(
@@ -51,9 +51,9 @@ class LLMTool:
         gpt系以外はエラー。
         """
         if not model_name.startswith("gpt"):
-            log("error", f"model_name='{model_name}' ではエージェントは作成できません。gpt系のみ対応です。", self.log_is)
+            log("error", f"model_name='{model_name}' ではエージェントは作成できません。gpt系のみ対応です。")
             raise ValueError("create_agentはgpt系モデルのみ対応です")
-        log("info", f"LLMエージェントを作成します。利用可能なツールは {tools} です。出力形式は {output_model} です。", self.log_is)
+        log("info", f"LLMエージェントを作成します。利用可能なツールは {tools} です。出力形式は {output_model} です。")
         llm = self.create_model(model_name=model_name, temperature=temperature, output_model=output_model)
         agent = create_openai_functions_agent(
             llm=llm,
@@ -78,5 +78,5 @@ class LLMTool:
             name=retriever_name,
             description=description
         )
-        log("info", f"retriever_tool '{retriever_name}' を作成しました。", self.log_is)
+        log("info", f"retriever_tool '{retriever_name}' を作成しました。")
         return retriever_tool

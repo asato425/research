@@ -20,12 +20,11 @@ class LintResult(BaseModel):
 
 
 class LinterTool:
-    def __init__(self, log_is: bool = True):
+    def __init__(self):
         """
         Returns:
             None
         """
-        self.log_is = log_is
 
     def actionlint(self, local_path: str) -> LintResult:
         """
@@ -39,7 +38,7 @@ class LinterTool:
                 status=None,
                 error_message="Directory not found."
             )
-            log(result.status, f"actionlint: {result.error_message}", self.log_is)
+            log(result.status, f"actionlint: {result.error_message}")
             return result
         try:
             proc = subprocess.run(
@@ -63,7 +62,7 @@ class LinterTool:
                 status=status,
                 error_message=None if status != "linter_error" else proc.stderr.strip()
             )
-            log(result.status, f"actionlint: {result.error_message}", self.log_is)
+            log(result.status, f"actionlint: {result.error_message}")
             return result
         except Exception as e:
             result = LintResult(
@@ -72,7 +71,7 @@ class LinterTool:
                 status="linter_error",
                 error_message=str(e)
             )
-            log(result.status, f"actionlint: {result.error_message}", self.log_is)
+            log(result.status, f"actionlint: {result.error_message}")
             return result
 
 
@@ -91,7 +90,7 @@ class LinterTool:
                 status=None,
                 error_message="Directory not found."
             )
-            log(result.status, f"ghalint: {result.error_message}", self.log_is)
+            log(result.status, f"ghalint: {result.error_message}")
             return result
         try:
             proc = subprocess.run(
@@ -111,7 +110,7 @@ class LinterTool:
                 status=status,
                 error_message=None if status != "linter_error" else proc.stderr.strip()
             )
-            log(result.status, f"ghalint: {result.error_message}", self.log_is)
+            log(result.status, f"ghalint: {result.error_message}")
             return result
         except Exception as e:
             result = LintResult(
@@ -120,6 +119,6 @@ class LinterTool:
                 status="linter_error",
                 error_message=str(e)
             )
-            log(result.status, f"ghalint: {result.error_message}", self.log_is)
+            log(result.status, f"ghalint: {result.error_message}")
             return result
 
