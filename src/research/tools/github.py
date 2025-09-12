@@ -48,9 +48,8 @@ class CloneResult(BaseModel):
 class GitHubTool:
     _server_process = None
 
-    def __init__(self, base_url: str = "http://localhost:8000", log_is: bool = True):
+    def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
-        self.log_is = log_is
         self._start_github_api_server()
         atexit.register(self._stop_github_api_server)
 
@@ -78,7 +77,7 @@ class GitHubTool:
             GitHubTool._server_process.terminate()
             GitHubTool._server_process.wait()
             GitHubTool._server_process = None
-    
+
     def fork_repository(self, repo_url: str) -> ForkResult:
         """
         Returns:
@@ -86,7 +85,7 @@ class GitHubTool:
         """
         resp = requests.post(f"{self.base_url}/github/fork", json={"repo_url": repo_url})
         result = ForkResult(**resp.json())
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def get_repository_info(self, repo_url: str) -> RepoInfoResult:
@@ -96,7 +95,7 @@ class GitHubTool:
         """
         resp = requests.get(f"{self.base_url}/github/info", params={"repo_url": repo_url})
         result = RepoInfoResult(**resp.json())
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def clone_repository(self, repo_url: str, local_path: str = None) -> CloneResult:
@@ -111,7 +110,7 @@ class GitHubTool:
             local_path = os.path.join(base_dir, repo_name)
         if os.path.exists(local_path):
             result = CloneResult(status="success", message=f"{local_path} は既に存在します。", local_path=local_path, repo_url=repo_url)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             subprocess.run(["git", "clone", repo_url, local_path], check=True)
@@ -120,8 +119,8 @@ class GitHubTool:
             result = CloneResult(status="error", message=str(e), local_path=local_path, repo_url=repo_url)
         except Exception as e:
             result = CloneResult(status="error", message=str(e), local_path=local_path, repo_url=repo_url)
-            
-        log(result.status, result.message, self.log_is)
+
+        log(result.status, result.message)
         return result
 
     def commit_and_push(self, local_path: str, message: str) -> PushResult:
@@ -133,10 +132,10 @@ class GitHubTool:
         try:
             subprocess.run(["git", "add", "."], cwd=local_path, check=True)
             subprocess.run(["git", "commit", "-m", message], cwd=local_path, check=True)
-            log("info", f"{local_path}をコミットに成功しました。", self.log_is)
+            log("info", f"{local_path}をコミットに成功しました。")
         except subprocess.CalledProcessError as e:
             result = PushResult(status="error", message=f"コミットエラー: {str(e)}", commit_sha=None)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
 
         # 現在のブランチ名を取得
@@ -145,29 +144,29 @@ class GitHubTool:
             branch = res.stdout.decode().strip()
         except Exception as e:
             result = PushResult(status="error", message=f"branch check error: {str(e)}", commit_sha=None)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
 
         # push（upstream未設定なら-u付きで再push）
         try:
             subprocess.run(["git", "push"], cwd=local_path, check=True)
-            log("info", f"{branch}のプッシュに成功しました。", self.log_is)
+            log("info", f"{branch}のプッシュに成功しました。")
         except subprocess.CalledProcessError:
             try:
                 subprocess.run(["git", "push", "-u", "origin", branch], cwd=local_path, check=True)
             except subprocess.CalledProcessError as e:
                 result = PushResult(status="error", message=f"push error: {str(e)}", commit_sha=None)
-                log(result.status, result.message, self.log_is)
+                log(result.status, result.message)
                 return result
 
         # コミットハッシュ取得
         try:
             commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=local_path, check=True, capture_output=True).stdout.decode().strip()
-            log("info", f"コミットハッシュの取得に成功しました。最新のコミットSHA: {commit_sha}", self.log_is)
+            log("info", f"コミットハッシュの取得に成功しました。最新のコミットSHA: {commit_sha}")
         except Exception:
             commit_sha = None
         result = PushResult(status="success", message=f"{branch}にコミットとプッシュをしました", commit_sha=commit_sha)
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def get_latest_workflow_logs(self, repo_url: str, commit_sha: str) -> WorkflowResult:
@@ -178,7 +177,7 @@ class GitHubTool:
         payload = {"repo_url": repo_url, "commit_sha": commit_sha}
         resp = requests.post(f"{self.base_url}/workflow/latest", json=payload)
         result = WorkflowResult(**resp.json())
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def create_working_branch(self, local_path: str, branch_name: str) -> RepoOpResult:
@@ -190,11 +189,11 @@ class GitHubTool:
         local_path_abs = os.path.abspath(local_path) if local_path else None
         if not local_path_abs:
             result = RepoInfoResult(status="error", info=None, message="cloneに失敗しているため作業用ブランチを作成できません。")
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         if local_path_abs == dev_repo_path:
             result = RepoInfoResult(status="error", info=None, message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。")
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
@@ -204,7 +203,7 @@ class GitHubTool:
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
 
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def create_file(self, local_path: str, relative_path: str) -> RepoOpResult:
@@ -216,7 +215,7 @@ class GitHubTool:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         if os.path.exists(file_path):
             result = RepoInfoResult(status="success", info=None, message=f"{file_path} は既に存在します。")
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             with open(file_path, "w"):
@@ -224,8 +223,8 @@ class GitHubTool:
             result = RepoInfoResult(status="success", info=None, message=f"{file_path}を作成しました")
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
-    
-        log(result.status, result.message, self.log_is)
+
+        log(result.status, result.message)
         return result
 
     def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoOpResult:
@@ -241,7 +240,7 @@ class GitHubTool:
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
 
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def delete_file(self, local_path: str, relative_path: str) -> RepoOpResult:
@@ -259,7 +258,7 @@ class GitHubTool:
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
 
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result
 
     def delete_cloned_repository(self, local_path: str) -> RepoOpResult:
@@ -269,20 +268,20 @@ class GitHubTool:
         """
         if not local_path:
             result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         elif not os.path.exists(local_path):
             result = RepoOpResult(status="not_found", message=f"{local_path} は存在しません。", path=None)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             shutil.rmtree(local_path)
             result = RepoOpResult(status="success", message=f"{local_path}を削除しました", path=None)
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         except Exception as e:
             result = RepoOpResult(status="error", message=str(e), path=None)
-            log(result.status, result.message, self.log_is) 
+            log(result.status, result.message)
             return result
 
     def read_file(self, local_path: str, relative_path: str) -> RepoOpResult:
@@ -293,7 +292,7 @@ class GitHubTool:
         file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
             result = RepoInfoResult(status="not_found", info=None, message=f"{file_path} は存在しないため読み込めません。")
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             with open(file_path, "r") as f:
@@ -302,8 +301,8 @@ class GitHubTool:
             result = RepoInfoResult(status="success", info=info, message=f"{file_path}を読み込みました")
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
-        log(result.status, result.message, self.log_is)
-        return result   
+        log(result.status, result.message)
+        return result
 
     def get_file_tree(self, local_path: str) -> RepoInfoResult:
         """
@@ -312,7 +311,7 @@ class GitHubTool:
         """
         if not os.path.exists(local_path):
             result = RepoInfoResult(status="not_found", info=None, message=f"{local_path} は存在しません。")
-            log(result.status, result.message, self.log_is)
+            log(result.status, result.message)
             return result
         try:
             file_tree = {}
@@ -323,5 +322,5 @@ class GitHubTool:
             result = RepoInfoResult(status="success", info=file_tree, message=f"{local_path}のファイルツリーを取得しました")
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
-        log(result.status, result.message, self.log_is)
+        log(result.status, result.message)
         return result

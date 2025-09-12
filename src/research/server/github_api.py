@@ -5,10 +5,13 @@ export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxをターミナルで実
 import time
 import logging
 import requests
+import getpass
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+from ..log_output.log import log
 load_dotenv()
 
 app = FastAPI()
@@ -41,6 +44,21 @@ class WorkflowResponse(BaseModel):
     logs_url: str | None = None
     failure_reason: str | None = None
 
+def set_github_token() -> None:
+    """
+    ターミナルからGitHubトークンを安全に入力させ、環境変数GITHUB_TOKENにセットする
+    """
+    token = getpass.getpass("GitHubトークンを入力してください（入力は非表示です）: ")
+    os.environ["GITHUB_TOKEN"] = token
+    log("info", "GITHUB_TOKENをセットしました。")
+
+def is_github_token_set() -> bool:
+    """
+    GITHUB_TOKENが環境変数にセットされているか確認する
+    Returns:
+        bool: セットされていればTrue、なければFalse
+    """
+    return bool(os.environ.get("GITHUB_TOKEN"))
 
 @app.post("/github/fork", response_model=ForkResponse)
 def fork_repository(req: ForkRequest):
@@ -51,10 +69,10 @@ def fork_repository(req: ForkRequest):
         from github import Github
         import os
         # 環境変数からGitHubアクセストークンを取得
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            return ForkResponse(status="error", message="GITHUB_TOKENが設定されていません", fork_url=None)
-        g = Github(token)
+        if not is_github_token_set():
+            set_github_token()
+        GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+        g = Github(GITHUB_TOKEN)
         # URLからowner/repo名を抽出
         import re
         m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
@@ -71,10 +89,10 @@ def fork_repository(req: ForkRequest):
 @app.post("/workflow/latest", response_model=WorkflowResponse)
 def get_latest_workflow_logs(req: WorkflowRequest):
     import os
-    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     # 環境変数からGitHubアクセストークンを取得
-    if not GITHUB_TOKEN:
-        return WorkflowResponse(status="error", message="GITHUB_TOKENが設定されていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+    if not is_github_token_set():
+        set_github_token()
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -181,9 +199,9 @@ def get_repository_info(repo_url: str):
     import re
     import os
     import requests
+    if not is_github_token_set():
+        set_github_token()
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-    if not GITHUB_TOKEN:
-        return RepoInfoResponse(status="error", info=None, message="GITHUB_TOKENが設定されていません")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
