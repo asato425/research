@@ -6,7 +6,7 @@ from ..log_output.log import log
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-llm = LLMTool(log_is=False).create_model(model_name="gemini", temperature=0.0)
+llm = LLMTool().create_model(model_name="gemini", temperature=0.0)
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -23,12 +23,12 @@ prompt = ChatPromptTemplate.from_messages(
         )
     ]
 )
-def get_yml_best_practices(programming_language:str, num:int = 10, log_is:bool = True):
+def get_yml_best_practices(programming_language:str, num:int = 10):
     '''
     Return
         GitHub Actionsのymlベストプラクティス
     '''
     chain = prompt | llm | StrOutputParser()
     result = chain.invoke({"programming_language": programming_language, "num": num})
-    log("info", f"{programming_language}プロジェクトのGitHub Actionsのymlベストプラクティスを{num}個取得しました。", log_is)
+    log("info", f"{programming_language}プロジェクトのGitHub Actionsのymlベストプラクティスを{num}個取得しました。")
     return result

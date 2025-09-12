@@ -7,7 +7,7 @@ YML_RULES = """
 - 値は基本的に文字列で、必要に応じてリストやマップを使用する
 - ...
 """
-    
-def get_yml_rules(log_is:bool = True):
-    log("info", "GitHub Actionsのyml記述ルールを取得しました。", log_is)
+
+def get_yml_rules():
+    log("info", "GitHub Actionsのyml記述ルールを取得しました。")
     return YML_RULES
