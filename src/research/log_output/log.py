@@ -27,7 +27,12 @@ handler.setFormatter(formatter)
 logger.handlers = [handler]
 logger.setLevel(logging.INFO)
 
-def log(status: str, message: str, log_is: bool = True) -> None:
+log_is = True
+def set_log_is(value: bool):
+    global log_is
+    log_is = value
+
+def log(status: str, message: str) -> None:
     """
     loggingモジュールを使ったログ出力関数
     status: success/info/warning/error/fail など
