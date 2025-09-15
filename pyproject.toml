@@ -187,12 +187,15 @@ dependencies = [
     "yarl (==1.20.1)",
     "zipp (==3.23.0)",
     "zstandard (==0.23.0)",
-    "pygithub (>=2.7.0,<3.0.0)"
+    "pygithub (>=2.7.0,<3.0.0)",
+    "pytest (>=8.4.2,<9.0.0)"
 ]
 
 [tool.poetry]
 packages = [{include = "research", from = "src"}]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

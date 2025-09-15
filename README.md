@@ -59,3 +59,10 @@ poetry export -f requirements.txt --output requirements.txt
 ---
 
 詳細は[Poetry公式ドキュメント](https://python-poetry.org/docs/)も参照してください。
+
+## テストの実行方法
+```shell
+poetry run pytest tests/test_github.py # 特定のテストファイルの実行
+
+poetry run pytest tests/ # フォルダ内の全てのテストを実行
+
