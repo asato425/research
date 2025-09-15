@@ -2,6 +2,7 @@
 from ..log_output.log import log
 YML_RULES = """
 - インデントはスペース2つ
+- onキーは必ず記述し、イベントにはmainブランチでのpushとworkflow_dispatchのみを指定する
 - コメントは#で始める
 - ジョブの内容を必ずコメントで説明する
 - ビルドとテストは必ず分けて記述する
