@@ -48,7 +48,7 @@ class CloneResult(BaseModel):
 
 class WorkflowDispatchResult(BaseModel):
     status: str
-    message: str
+    message: str | None = None
 
 class GitHubTool:
     _server_process = None
@@ -174,7 +174,7 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def dispatch_workflow(self, repo_url: str, ref: str, file_name: str) -> "WorkflowDispatchResult":
+    def dispatch_workflow(self, repo_url: str, ref: str, workflow_id: str) -> WorkflowDispatchResult:
         """
         指定したワークフローをworkflow_dispatchで手動実行する。
         Args:
@@ -184,7 +184,7 @@ class GitHubTool:
         Returns:
             WorkflowDispatchResult: status(str), message(str)
         """
-        payload = {"repo_url": repo_url, "ref": ref, "file_name": file_name}
+        payload = {"repo_url": repo_url, "ref": ref, "workflow_id": workflow_id}
         resp = requests.post(f"{self.base_url}/workflow/dispatch", json=payload)
         result = WorkflowDispatchResult(**resp.json())
         log(result.status, result.message)

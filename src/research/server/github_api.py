@@ -48,11 +48,10 @@ class WorkflowResponse(BaseModel):
 class WorkflowDispatchRequest(BaseModel):
     repo_url: str = Field(..., description="GitHubリポジトリのURL")
     ref: str = Field(..., description="実行したいブランチ名（例: main）")
-    file_name: str = Field(..., description="ワークフローのファイル名（例: ci.yml）")
+    workflow_id: str = Field(..., description="ワークフローのファイル名、またはID（例: ci.yml, 1234567）")
 class WorkflowDispatchResponse(BaseModel):
     status: str
-    message: str
-    
+    message: str | None = None
 
 def set_github_token() -> None:
     """
