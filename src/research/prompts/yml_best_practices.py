@@ -19,7 +19,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "{programming_language}でGitHub Actionsのワークフローを作成する際のベストプラクティス・推奨事項・yml記述上の注意点・よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、箇条書きで{num}個詳しく教えてください。"
+            "{programming_language}でGitHub Actionsのワークフローを作成する際のベストプラクティス・推奨事項・パッケージ管理ツール、ビルドツール、テストツール、その他コマンドなどのツールやコマンドの違い・よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、箇条書きで{num}個詳しく教えてください。"
         )
     ]
 )
