@@ -32,6 +32,7 @@ class RepoInfoResponse(BaseModel):
     info: dict | None = None
     message: str | None = None
 
+
 class WorkflowRequest(BaseModel):
     repo_url: str = Field(..., description="GitHubリポジトリのURL")
     commit_sha: str = Field(..., description="対象コミットのSHA")
@@ -43,6 +44,15 @@ class WorkflowResponse(BaseModel):
     html_url: str | None = None
     logs_url: str | None = None
     failure_reason: str | None = None
+    
+class WorkflowDispatchRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHubリポジトリのURL")
+    ref: str = Field(..., description="実行したいブランチ名（例: main）")
+    file_name: str = Field(..., description="ワークフローのファイル名（例: ci.yml）")
+class WorkflowDispatchResponse(BaseModel):
+    status: str
+    message: str
+    
 
 def set_github_token() -> None:
     """
@@ -85,6 +95,35 @@ def fork_repository(req: ForkRequest):
         return ForkResponse(status="success", message=f" {req.repo_url}をforkしました", fork_url=forked_repo.html_url)
     except Exception as e:
         return ForkResponse(status="error", message=str(e), fork_url=None)
+
+@app.post("/workflow/dispatch", response_model=WorkflowDispatchResponse)
+def dispatch_workflow(req: WorkflowDispatchRequest):
+    """
+    指定したワークフローをworkflow_dispatchで手動実行する。
+    """
+    import re
+    if not is_github_token_set():
+        set_github_token()
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
+    if not m:
+        return WorkflowDispatchResponse(status="error", message="リポジトリURLの形式が不正です")
+    owner, repo = m.group(1), m.group(2)
+    url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{req.workflow_id}/dispatches"
+    data = {"ref": req.ref}
+    try:
+        resp = requests.post(url, headers=headers, json=data)
+        if resp.status_code == 204:
+            return WorkflowDispatchResponse(status="success", message="ワークフローの手動実行をトリガーしました")
+        else:
+            return WorkflowDispatchResponse(status="error", message=f"APIエラー: {resp.status_code} {resp.text}")
+    except Exception as e:
+        return WorkflowDispatchResponse(status="error", message=str(e))
+
 
 @app.post("/workflow/latest", response_model=WorkflowResponse)
 def get_latest_workflow_logs(req: WorkflowRequest):

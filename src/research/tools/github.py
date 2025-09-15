@@ -1,13 +1,15 @@
+
 """
 GitHub APIクライアント側のラッパーやAPI呼び出し用関数を実装するモジュール。
 """
-from pydantic import BaseModel
+
 import requests
 import subprocess
 import atexit
 import time
 import os
 import shutil
+from pydantic import BaseModel
 from ..log_output.log import log
 
 class RepoOpResult(BaseModel):
@@ -44,6 +46,9 @@ class CloneResult(BaseModel):
     local_path: str | None = None
     repo_url: str | None = None
 
+class WorkflowDispatchResult(BaseModel):
+    status: str
+    message: str
 
 class GitHubTool:
     _server_process = None
@@ -169,6 +174,22 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
+    def dispatch_workflow(self, repo_url: str, ref: str, file_name: str) -> "WorkflowDispatchResult":
+        """
+        指定したワークフローをworkflow_dispatchで手動実行する。
+        Args:
+            repo_url (str): リポジトリURL
+            ref (str): 実行したいブランチ名（例: main）
+            file_name (str): ワークフローのファイル名（例: ci.yml）
+        Returns:
+            WorkflowDispatchResult: status(str), message(str)
+        """
+        payload = {"repo_url": repo_url, "ref": ref, "file_name": file_name}
+        resp = requests.post(f"{self.base_url}/workflow/dispatch", json=payload)
+        result = WorkflowDispatchResult(**resp.json())
+        log(result.status, result.message)
+        return result
+    
     def get_latest_workflow_logs(self, repo_url: str, commit_sha: str) -> WorkflowResult:
         """
         Returns:
