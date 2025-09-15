@@ -4,11 +4,11 @@ from research.tools.rag import RAGTool
 from research.log_output.log import set_log_is
 
 def main():
-    set_log_is(False)
+    set_log_is(True)
     github = GitHubTool()
-    llm = LLMTool()
-    rag = RAGTool()
+    # llm = LLMTool()
+    # rag = RAGTool()
     repo_url = "https://github.com/asato425/test"
-    github.get_repository_info(repo_url)
+    github.dispatch_workflow(repo_url, "main", "python-package.yml")
 if __name__ == "__main__":
     main()
