@@ -23,7 +23,7 @@ class LintResult(BaseModel):
     Lint結果を表すPydanticモデル。
     Lint結果とそのパース結果を保持する。
     """
-    state: str = Field(..., description="Lint結果の状態")
+    status: str = Field(..., description="Lint結果の状態")
     raw_error: Optional[str] = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
 
@@ -32,7 +32,7 @@ class WorkflowRunResult(BaseModel):
     ワークフローの実行結果を表すPydanticモデル。
     実行結果とそのパース結果を保持する。
     """
-    state: str = Field(..., description="ワークフロー実行結果の状態")
+    status: str = Field(..., description="ワークフロー実行結果の状態")
     raw_error: Optional[str] = Field(None, description="ワークフロー実行エラーの原文（ツール出力そのまま）")
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したワークフロー実行エラー")
 
