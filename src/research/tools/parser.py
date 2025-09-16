@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from ..log_output.log import log
-from ..tools.llm import llm
+from ..tools.llm import LLMTool
 from langchain_core.prompts import ChatPromptTemplate
 from ..tools.github import WorkflowResult
 from ..tools.linter import LintResult
@@ -10,12 +10,15 @@ class ParseResult(BaseModel):
 
 
 class ParserTool:
-    def __init__(self, llm: llm = llm("gemini")):
+    def __init__(self, model_name: str = "gemini"):
         """
         Returns:
             None
         """
-        self.llm = llm.with_structured_output(ParseResult)
+        self.llm = LLMTool().create_model(
+            model_name=model_name, 
+            output_model=ParseResult
+        )
 
     def workflow_log_parse(self, workflow_result: WorkflowResult) -> ParseResult:
 
@@ -24,7 +27,7 @@ class ParserTool:
 		エラー内容をわかりやすく辞書形式で返す。
 
 		Returns:
-			WorkflowLogParseResult: error_details(str|None)
+			ParseResult: parse_details(str|None)
 		"""
 		
         status = workflow_result.status
@@ -56,7 +59,7 @@ class ParserTool:
                     )
                 ]
             )
-            chain = prompt | llm
+            chain = prompt | self.llm
 
             log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details}")
             return chain.invoke(
@@ -115,7 +118,7 @@ class ParserTool:
                 ]
             )
 
-            chain = llm_prompt | llm
+            chain = llm_prompt | self.llm
             result = chain.invoke({
                 "local_path": local_path,
                 "status": status,
