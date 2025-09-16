@@ -8,6 +8,10 @@ from ..state import WorkflowState
 class ExplanationGenerator:
     """説明文の生成を担当するクラス"""
 
+    def __init__(self, model_name: str = "gemini", agent_is : bool = False):
+        self.model_name = model_name
+        self.agent_is = agent_is
+        
     def __call__(self, state: WorkflowState):
         """解説文を生成するメソッド"""
         result = None
