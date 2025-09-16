@@ -1,14 +1,16 @@
-from research.tools.github import GitHubTool
-from research.tools.llm import LLMTool
-from research.tools.rag import RAGTool
 from research.log_output.log import set_log_is
+from research.langgraph.nodes.workflow_generator import WorkflowGenerator
+from research.langgraph.nodes.github_repo_parser import GitHubRepoParser
+from research.langgraph.state import WorkflowState
 
 def main():
     set_log_is(True)
-    github = GitHubTool()
-    # llm = LLMTool()
-    # rag = RAGTool()
+
     repo_url = "https://github.com/asato425/test"
-    github.dispatch_workflow(repo_url, "main", "python-package.yml")
+    repo_parser = GitHubRepoParser()
+    workflow_generator = WorkflowGenerator()
+
+    state = WorkflowState(repo_url = repo_url)
+
 if __name__ == "__main__":
     main()
