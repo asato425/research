@@ -29,11 +29,16 @@ class WorkflowExecutor:
         commit_sha = push_result.commit_sha
 
         # ワークフローの実行
-        workflow_execute_result = github.dispatch_workflow(
-            repo_url=state.repo_url,
-            ref=state.work_ref,
-            workflow_id=state.generate_workflows[-1].file_name
-        )
+        if len(state.generate_workflows) > 0:
+            workflow_execute_result = github.dispatch_workflow(
+                repo_url=state.repo_url,
+                ref=state.work_ref,
+                workflow_id=state.generate_workflows[-1].file_name
+            )
+        else:
+            log("error", "生成されたワークフローが存在しないためプログラムを終了します")
+            sys.exit()
+
         if workflow_execute_result.status != "success":
             log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
             sys.exit()
