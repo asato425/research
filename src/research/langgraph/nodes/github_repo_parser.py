@@ -15,18 +15,17 @@ class GitHubRepoParser:
         """入力データをパースするメソッドの例"""
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
-        
+
+        # リポジトリ情報の取得
         repo_info_result = github.get_repository_info(state.repo_url)
-        log(repo_info_result.status, repo_info_result.message)
         repo_info = repo_info_result.info
-        
+
+        # リポジトリのクローン
         clone_result = github.clone_repository(state.repo_url)
-        log(clone_result.status, clone_result.message)
-        
         local_path = clone_result.local_path
-        
+
+        # ファイルツリーの取得
         file_tree_result = github.get_file_tree(local_path)
-        log(file_tree_result.status, file_tree_result.message)
         
         return {
             "local_path": local_path,
