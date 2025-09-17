@@ -8,6 +8,19 @@ from typing import Annotated, Optional
 LangGraphのグラフ構築時に各ノード間で受け渡すデータ構造として利用。
 """
 
+class RequiredFile(BaseModel):
+    """ワークフローで必要なファイル"""
+    name: str = Field(..., description="ワークフローで必要なファイルのファイル名")
+    description: str = Field(..., description="ワークフローで必要なファイルの説明")
+    path: str = Field(..., description="ワークフローで必要なファイルのパス(プロジェクトのルートからの相対パス)")
+    content: str | None = Field(None, description="ワークフローで必要なファイルの内容")
+
+class WorkflowRequiredFiles(BaseModel):
+    workflow_required_files: list[RequiredFile] = Field(
+        default_factory=list, 
+        description="ワークフローで必要なファイルのリスト"
+    )
+
 class GenerateWorkflow(BaseModel):
     """
     ワークフロー生成のためのPydanticモデル。
@@ -55,6 +68,10 @@ class WorkflowState(BaseModel):
     repo_info: dict = Field(None, description="リポジトリ情報")
     file_tree: dict = Field(None, description="リポジトリのファイルツリー")
     language: Optional[str] = Field(None, description="対象のプロジェクトに使用されている主要プログラミング言語")
+    max_required_files: int = Field(10, description="ワークフロー生成に必要な主要ファイルの最大数")
+    workflow_required_files: Annotated[list[RequiredFile], operator.add] = Field(
+        default_factory=list, description="生成されたワークフローで必要なファイルのリスト"
+    )
     best_practice_num: int = Field(10, description="言語固有のベストプラクティスの数")
    
     generate_workflows: Annotated[list[GenerateWorkflow], operator.add] = Field(
