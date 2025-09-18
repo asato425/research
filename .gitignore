@@ -64,3 +64,4 @@ coverage.xml
 
 # python-dotenv
 .env
+.venv
