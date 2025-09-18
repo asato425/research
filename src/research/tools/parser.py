@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
-from ..log_output.log import log
-from ..tools.llm import LLMTool
 from langchain_core.prompts import ChatPromptTemplate
-from ..tools.github import WorkflowResult
-from ..tools.linter import LintResult
+from research.log_output.log import log
+from research.tools.llm import LLMTool
+from research.tools.github import WorkflowResult
+from research.tools.linter import LintResult
 
 class ParseResult(BaseModel):
     parse_details: str | None = Field(None, description="パースの詳細")

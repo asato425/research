@@ -5,7 +5,7 @@ WebやGitHubなどから情報を取得し、LLMに渡すための構造化デ�
 from typing import Any, Callable
 import os
 from langchain_community.retrievers import TavilySearchAPIRetriever
-from ..log_output.log import log
+from research.log_output.log import log
 
 class RAGTool:
     """

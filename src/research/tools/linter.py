@@ -3,7 +3,7 @@ from typing import Any
 import subprocess
 import os
 import json
-from ..log_output.log import log
+from research.log_output.log import log
 
 class LintResult(BaseModel):
     """

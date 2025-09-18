@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import Tool
 from langchain.tools.retriever import create_retriever_tool
 from langchain.agents import create_openai_functions_agent, AgentExecutor
-from ..log_output.log import log
+from research.log_output.log import log
 from dotenv import load_dotenv
 load_dotenv()
 
