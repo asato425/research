@@ -17,7 +17,7 @@ class ColorFormatter(logging.Formatter):
         levelname = record.levelname
         color = self.COLOR_MAP.get(levelname, "\033[31m")
         msg = super().format(record)
-        return f"{self.STR_BOLD}{color}(LOG){levelname}: {msg}{self.STR_RESET}"
+        return f"{self.STR_BOLD}{color}{levelname}: {msg}{self.STR_RESET}"
 
 # ロガー設定
 logger = logging.getLogger("research")
