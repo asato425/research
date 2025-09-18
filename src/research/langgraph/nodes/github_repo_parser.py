@@ -84,5 +84,6 @@ class GitHubRepoParser:
             "repo_info": repo_info,
             "language": repo_info.language,
             "workflow_required_files": workflow_required_files_result,
-            "prev_node": "github_repo_parser"
+            "prev_node": "github_repo_parser",
+            "node_history": ["github_repo_parser"]
         }

@@ -4,6 +4,7 @@ from ...tools.parser import ParserTool
 from ..state import WorkflowState, WorkflowRunResult
 from ...log_output.log import log
 import sys
+from typing import Any
 """
 このモジュールはワークフローの実行を担当します。
 """
@@ -12,7 +13,7 @@ import sys
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
-    def __call__(self, state: WorkflowState) -> dict[str, WorkflowRunResult]:
+    def __call__(self, state: WorkflowState) -> dict[str, Any]:
         local_path = state.local_path
         github = GitHubTool()
         parser = ParserTool()
@@ -59,6 +60,7 @@ class WorkflowExecutor:
             parsed_error=parser_result.parse_details,
         )
         return {
-            "workflow_run_results": result,
-            "prev_node": "workflow_executor"
+            "workflow_run_results": [result],
+            "prev_node": "workflow_executor",
+            "node_history": ["workflow_executor"]
         }

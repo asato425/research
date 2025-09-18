@@ -66,12 +66,12 @@ class WorkflowGenerator:
         self.model_name = model_name
         self.agent_is = agent_is
 
-    def __call__(self, phase: str, state: WorkflowState)-> dict[str, Any]:
-        if "repo_info" == phase:
+    def __call__(self, state: WorkflowState)-> dict[str, Any]:
+        if "github_repo_parser" == state.prev_node:
             result =  self._generate_workflow(state, self.agent_is)
-        elif "lint_result" == phase:
+        elif "workflow_linter" == state.prev_node:
             result = self._modify_after_lint(state, self.agent_is)
-        elif "exec_result" == phase:
+        elif "workflow_executor" == state.prev_node:
             result = self._modify_after_execute(state, self.agent_is)
         else:
             raise ValueError("不正な入力です")
@@ -108,19 +108,22 @@ class WorkflowGenerator:
             sys.exit()
 
         return {
-            "generate_workflows": result,
+            "generate_workflows": [result],
             "prev_node": "workflow_generator",
+            "node_history": ["workflow_generator"],
             "loop_count": state.loop_count+1
         }
 
-    def _generate_workflow(self, state:WorkflowState, agent_is: bool = False)-> dict[str, GenerateWorkflow]:
+    def _generate_workflow(self, state:WorkflowState, agent_is: bool = False)-> GenerateWorkflow:
         """
         リポジトリ情報からワークフロー情報を生成
         """
         # repo_infoをもとにワークフロー情報を生成する処理
         llm = LLMTool()
         github = GitHubTool()
-        
+
+        # 推奨されない書き方ですが、一旦stateにbest_practicesを追加
+        state.best_practices = get_yml_best_practices(state.language, state.best_practice_num)
         input = {
                 "local_path": state.local_path,
                 "file_tree": state.file_tree,
@@ -164,7 +167,7 @@ class WorkflowGenerator:
         
         return result
 
-    def _modify_after_lint(self, state: WorkflowState):
+    def _modify_after_lint(self, state: WorkflowState) -> GenerateWorkflow:
         """
         linter後の指摘をもとにワークフロー情報を修正
         lint_resultにはファイルの内容とlint結果を含む
@@ -173,7 +176,7 @@ class WorkflowGenerator:
         result = None
         return result
 
-    def _modify_after_execute(self, state: WorkflowState):
+    def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
         """
         executor後の実行結果をもとにワークフロー情報を修正
         exec_resultにはファイルの内容と実行結果を含む
