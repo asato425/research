@@ -5,13 +5,16 @@ GitHub APIクライアント側のラッパーやAPI呼び出し用関数を実�
 
 import requests
 import subprocess
+import getpass
 import atexit
 import time
 import os
 import shutil
 from pydantic import BaseModel
-from ..log_output.log import log
+from research.log_output.log import log
+from dotenv import load_dotenv
 
+load_dotenv()
 class RepoOpResult(BaseModel):
     status: str
     message: str
@@ -50,6 +53,7 @@ class WorkflowDispatchResult(BaseModel):
     status: str
     message: str | None = None
 
+
 class GitHubTool:
     _server_process = None
 
@@ -83,11 +87,32 @@ class GitHubTool:
             GitHubTool._server_process.wait()
             GitHubTool._server_process = None
 
+
+    def _set_github_token(self) -> None:
+        """
+        ターミナルからGitHubトークンを安全に入力させ、環境変数GITHUB_TOKENにセットする
+        """
+        token = getpass.getpass("GitHubトークンを入力してください（入力は非表示です）: ")
+        os.environ["GITHUB_TOKEN"] = token
+        log("info", "GITHUB_TOKENをセットしました。")
+
+    def _is_github_token_set(self) -> bool:
+        """
+        GITHUB_TOKENが環境変数にセットされているか確認する
+        Returns:
+            bool: セットされていればTrue、なければFalse
+        """
+        return bool(os.environ.get("GITHUB_TOKEN"))
+    
     def fork_repository(self, repo_url: str) -> ForkResult:
         """
         Returns:
             ForkResult: status(str), message(str), fork_url(str|None)
         """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
+            self._set_github_token()
+
         resp = requests.post(f"{self.base_url}/github/fork", json={"repo_url": repo_url})
         result = ForkResult(**resp.json())
         log(result.status, result.message)
@@ -98,6 +123,10 @@ class GitHubTool:
         Returns:
             RepoInfoResult: status(str), info(dict|None), message(str|None)
         """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
+            self._set_github_token()
+
         resp = requests.get(f"{self.base_url}/github/info", params={"repo_url": repo_url})
         result = RepoInfoResult(**resp.json())
         log(result.status, result.message)
@@ -184,6 +213,10 @@ class GitHubTool:
         Returns:
             WorkflowDispatchResult: status(str), message(str)
         """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
+            self._set_github_token()
+            
         payload = {"repo_url": repo_url, "ref": ref, "workflow_id": workflow_id}
         resp = requests.post(f"{self.base_url}/workflow/dispatch", json=payload)
         result = WorkflowDispatchResult(**resp.json())
@@ -195,6 +228,10 @@ class GitHubTool:
         Returns:
             WorkflowResult: status(str), message(str), conclusion(str|None), html_url(str|None), logs_url(str|None), failure_reason(str|None)
         """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
+            self._set_github_token()
+
         payload = {"repo_url": repo_url, "commit_sha": commit_sha}
         resp = requests.post(f"{self.base_url}/workflow/latest", json=payload)
         result = WorkflowResult(**resp.json())
@@ -216,11 +253,17 @@ class GitHubTool:
             result = RepoInfoResult(status="error", info=None, message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。")
             log(result.status, result.message)
             return result
+        
+        # 現在あるブランチ名を確認し、すでに存在する場合はそのまま成功を返す
         try:
-            subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
-            result = RepoInfoResult(status="success", info=None, message=f"{branch_name}を作成しました")
-        except subprocess.CalledProcessError as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            subprocess.run(["git", "checkout", branch_name], cwd=local_path, check=True)
+            result = RepoInfoResult(status="success", info=None, message=f"{branch_name}はすでに存在します")
+        except subprocess.CalledProcessError:
+            try:
+                subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
+                result = RepoInfoResult(status="success", info=None, message=f"{branch_name}を作成しました")
+            except subprocess.CalledProcessError as e:
+                result = RepoInfoResult(status="error", info=None, message=str(e))
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
 
@@ -276,6 +319,25 @@ class GitHubTool:
         try:
             os.remove(file_path)
             result = RepoInfoResult(status="success", info=None, message=f"{file_path}を削除しました")
+        except Exception as e:
+            result = RepoInfoResult(status="error", info=None, message=str(e))
+
+        log(result.status, result.message)
+        return result
+
+    def delete_folder(self, local_path: str, relative_path: str) -> RepoOpResult:
+        """
+        Returns:
+            RepoOpResult: status(str), message(str), path(str|None)
+        """
+        folder_path = os.path.join(local_path, relative_path)
+        if not os.path.exists(folder_path):
+            result = RepoInfoResult(status="not_found", info=None, message=f"{folder_path} は存在しません。")
+            log(result.status, result.message)
+            return result
+        try:
+            shutil.rmtree(folder_path)
+            result = RepoInfoResult(status="success", info=None, message=f"{folder_path}を削除しました")
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
 

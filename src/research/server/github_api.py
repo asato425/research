@@ -5,13 +5,11 @@ export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxをターミナルで実
 import time
 import logging
 import requests
-import getpass
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-from ..log_output.log import log
 load_dotenv()
 
 app = FastAPI()
@@ -53,14 +51,6 @@ class WorkflowDispatchResponse(BaseModel):
     status: str
     message: str | None = None
 
-def set_github_token() -> None:
-    """
-    ターミナルからGitHubトークンを安全に入力させ、環境変数GITHUB_TOKENにセットする
-    """
-    token = getpass.getpass("GitHubトークンを入力してください（入力は非表示です）: ")
-    os.environ["GITHUB_TOKEN"] = token
-    log("info", "GITHUB_TOKENをセットしました。")
-
 def is_github_token_set() -> bool:
     """
     GITHUB_TOKENが環境変数にセットされているか確認する
@@ -79,7 +69,7 @@ def fork_repository(req: ForkRequest):
         import os
         # 環境変数からGitHubアクセストークンを取得
         if not is_github_token_set():
-            set_github_token()
+            return ForkResponse(status="error", message="GITHUB_TOKENがセットされていません", fork_url=None)
         GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
         g = Github(GITHUB_TOKEN)
         # URLからowner/repo名を抽出
@@ -102,7 +92,7 @@ def dispatch_workflow(req: WorkflowDispatchRequest):
     """
     import re
     if not is_github_token_set():
-        set_github_token()
+        return WorkflowDispatchResponse(status="error", message="GITHUB_TOKENがセットされていません")
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
@@ -129,7 +119,7 @@ def get_latest_workflow_logs(req: WorkflowRequest):
     import os
     # 環境変数からGitHubアクセストークンを取得
     if not is_github_token_set():
-        set_github_token()
+        return WorkflowResponse(status="error", message="GITHUB_TOKENがセットされていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
@@ -238,7 +228,7 @@ def get_repository_info(repo_url: str):
     import os
     import requests
     if not is_github_token_set():
-        set_github_token()
+        return RepoInfoResponse(status="error", info=None, message="GITHUB_TOKENがセットされていません")
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
