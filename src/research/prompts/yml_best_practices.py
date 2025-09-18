@@ -1,8 +1,8 @@
 '''
 LLMを使用して、特定のプログラミング言語におけるGitHub Actionsのymlベストプラクティスを取得します。
 '''
-from ..tools.llm import LLMTool
-from ..log_output.log import log
+from research.tools.llm import LLMTool
+from research.log_output.log import log
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 

@@ -1,5 +1,5 @@
 # ymlファイルを書くうえでのルールを記述したプロンプトをまとめてください
-from ..log_output.log import log
+from research.log_output.log import log
 YML_RULES = """
 - インデントはスペース2つ
 - onキーは必ず記述し、イベントにはworkflow_dispatchのみを指定する
