@@ -72,12 +72,21 @@ class WorkflowState(BaseModel):
     ワークフローの進行状況や各ノード間で共有する情報を保持するPydanticモデル。
     必要に応じて属性を追加・修正してください。
     """
-    # インスタンス化時に必須のフィールド
+    
+    # ノードの実行制御フラグ
     run_github_parser: bool = Field(False, description="github_repo_parserノードを実行するか")
     run_workflow_generator: bool = Field(False, description="workflow_generatorノードを実行するか")
     run_linter: bool = Field(False, description="lintノードを実行するか")
     run_workflow_executer: bool = Field(False, description="workflow_executerノードを実行するか")
     run_explanation_generator: bool = Field(False, description="explanation_generatorノードを実行するか")
+    
+    # 細かい処理の実行制御フラグ
+    run_actionlint: bool = Field(True, description="actionlintを実行するか")
+    run_ghalint: bool = Field(True, description="ghalintを実行するか")
+    generate_workflow_required_files: bool = Field(True, description="workflow_required_filesを生成するか")
+    generate_best_practices: bool = Field(True, description="best_practicesを生成するか")
+    
+    # インスタンス化時に必須のフィールド(実行時はrepo_urlのみコマンドライン引数で必ず指定)
     repo_url: str = Field(..., description="リポジトリのURL")
     work_ref: str = Field(..., description="作業用のブランチの名前")
     yml_file_name: str = Field(..., description="生成されたYAMLファイルの名前")
@@ -104,7 +113,7 @@ class WorkflowState(BaseModel):
     )
 
     # workflow_generatorで設定されるフィールド
-    best_practices: Optional[list[str]] = Field(None, description="言語固有のベストプラクティスのリスト")
+    best_practices: Optional[str] = Field(None, description="言語固有のベストプラクティス")
     generate_workflows: Annotated[list[GenerateWorkflow], operator.add] = Field(
         default_factory=list, description="生成ワークフローのリスト"
     )
@@ -137,6 +146,12 @@ class WorkflowState(BaseModel):
                  f"ワークフロー生成: {'実行' if self.run_workflow_generator else 'スキップ'}\n" + \
                  f"Lint: {'実行' if self.run_linter else 'スキップ'}\n" + \
                  f"ワークフロー実行: {'実行' if self.run_workflow_executer else 'スキップ'}\n" + \
+                 f"解説生成: {'実行' if self.run_explanation_generator else 'スキップ'}\n\n" + \
+                 "細かい処理の実行状況:\n" + \
+                 f"actionlint: {'実行' if self.run_actionlint else 'スキップ'}\n" + \
+                 f"ghalint: {'実行' if self.run_ghalint else 'スキップ'}\n" + \
+                 f"主要ファイル生成: {'実行' if self.generate_workflow_required_files else 'スキップ'}\n" + \
+                 f"ベストプラクティス生成: {'実行' if self.generate_best_practices else 'スキップ'}\n" + \
                  "\n" + \
                  f"リポジトリURL: {self.repo_url}\n" + \
                  f"作業用ブランチ: {self.work_ref}\n" + \
@@ -145,26 +160,26 @@ class WorkflowState(BaseModel):
                  f"ノード履歴: {' -> '.join(self.node_history)}\n" + \
                  f"ローカルパス: {self.local_path}\n" + \
                  f"言語: {self.language}\n" + \
-                 f"ベストプラクティス: {self.best_practices}\n"
+                 f"ベストプラクティス: {self.best_practices}\n\n"
 
         if self.workflow_required_files:
             result += "主要ファイル:\n"
             for file in self.workflow_required_files:
-                result += file.summary() + "\n"
+                result += file.summary() + "\n\n"
         if self.generate_workflows:
             result += "生成されたワークフロー:\n"
             for workflow in self.generate_workflows:
-                result += workflow.summary() + "\n"
+                result += workflow.summary() + "\n\n"
         if self.actionlint_results:
             result += "actionlint結果:\n"
             for lint in self.actionlint_results:
-                result += lint.summary() + "\n"
+                result += lint.summary() + "\n\n"
         if self.ghalint_results:
             result += "ghalint結果:\n"
             for lint in self.ghalint_results:
-                result += lint.summary() + "\n"
+                result += lint.summary() + "\n\n"
         if self.workflow_run_results:
             result += "ワークフロー実行結果:\n"
             for run in self.workflow_run_results:
-                result += run.summary() + "\n"
+                result += run.summary() + "\n\n"
         return result
