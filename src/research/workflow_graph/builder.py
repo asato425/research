@@ -73,11 +73,15 @@ class WorkflowBuilder:
 
 
     def run(self, repo_url: str, 
-            run_github_parser: bool = True,
-            run_workflow_generator: bool = False,
-            run_linter: bool = False,
-            run_workflow_executer: bool = False,
-            run_explanation_generator: bool = False,
+            run_github_parser: bool,
+            run_workflow_generator: bool,
+            run_linter: bool,
+            run_workflow_executer: bool,
+            run_explanation_generator: bool,
+            run_actionlint: bool,
+            run_ghalint: bool,
+            generate_workflow_required_files: bool,
+            generate_best_practices: bool,
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
             lint_loop_count_max: int = 3, best_practice_num: int = 10) -> WorkflowState:
@@ -85,11 +89,21 @@ class WorkflowBuilder:
         """ワークフローの実行を開始するメソッド
         Inputs:
             repo_url (str): リポジトリのURL
+
+            **ノードの実行制御フラグ**
             run_github_parser (bool): github_repo_parserノードを実行するか
             run_workflow_generator (bool): workflow_generatorノードを実行するか
             run_linter (bool): lintノードを実行するか
             run_workflow_executer (bool): workflow_executerノードを実行するか
             run_explanation_generator (bool): explanation_generatorノードを実行するか
+
+            **細かい処理の実行制御フラグ**
+            run_actionlint (bool): actionlintノードを実行するか
+            run_ghalint (bool): ghalintノードを実行するか
+            generate_workflow_required_files (bool): workflow_required_filesノードを実行するか
+            generate_best_practices (bool): best_practicesノードを実行する
+            
+            **その他のパラメータ**
             work_ref (str): 作業用のブランチの名前(初期値: "test")
             yml_file_name (str): 生成されたYAMLファイルの名前(初期値: "ci.yml")
             max_required_files (int): ワークフロー生成に必要な主要ファイルの最大数(初期値: 5)
@@ -107,6 +121,10 @@ class WorkflowBuilder:
             run_linter=run_linter,
             run_workflow_executer=run_workflow_executer,
             run_explanation_generator=run_explanation_generator,
+            run_actionlint=run_actionlint,
+            run_ghalint=run_ghalint,
+            generate_workflow_required_files=generate_workflow_required_files,
+            generate_best_practices=generate_best_practices,
             work_ref=work_ref,
             yml_file_name=yml_file_name,
             max_required_files=max_required_files,
