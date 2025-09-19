@@ -45,22 +45,41 @@ class WorkflowLinter:
         local_path = state.local_path
 
         # actionlintによるチェック
-        actionlint_result = linter.actionlint(local_path)
-        parse_result = parser.lint_result_parse(actionlint_result)
-        actionlint_result = LintResult(
-            status=actionlint_result.status,
-            raw_error=actionlint_result.raw_output,
-            parsed_error=parse_result
-        )
+        if state.run_actionlint:
+            log("info", "actionlintによるLintを開始します")
+            actionlint_result = linter.actionlint(local_path)
+            parse_result = parser.lint_result_parse(actionlint_result)
+            actionlint_result = LintResult(
+                status=actionlint_result.status,
+                raw_error=actionlint_result.raw_output,
+                parsed_error=parse_result
+            )
+        else:
+            log("info", "actionlintによるLintはスキップされました")
+            actionlint_result = LintResult(
+                status="success",
+                raw_error=None,
+                parsed_error=None
+            )
 
-        # ghalintによるチェック
-        ghalint_result = linter.ghalint(local_path)
-        parse_result = parser.lint_result_parse(ghalint_result)
-        ghalint_result = LintResult(
-            status=ghalint_result.status,
-            raw_error=ghalint_result.raw_output,
-            parsed_error=parse_result
-        )
+        if state.run_ghalint:
+            log("info", "ghalintによるLintを開始します")
+            # ghalintによるチェック
+            ghalint_result = linter.ghalint(local_path)
+            parse_result = parser.lint_result_parse(ghalint_result)
+            ghalint_result = LintResult(
+                status=ghalint_result.status,
+                raw_error=ghalint_result.raw_output,
+                parsed_error=parse_result
+            )
+        else:
+            log("info", "ghalintによるLintはスキップされました")
+            ghalint_result = LintResult(
+                status="success",
+                raw_error=None,
+                parsed_error=None
+            )
+    
         return {
             "actionlint_results": [actionlint_result],
             "ghalint_results": [ghalint_result],

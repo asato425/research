@@ -65,52 +65,59 @@ class GitHubRepoParser:
             sys.exit()
         file_tree = file_tree_result.info
 
-        # LLMによる主要ファイル選定のプロンプトの作成
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "あなたは日本のソフトウェア開発の専門家です。"),
-            ("human", 
-             "以下のプロジェクトのGitHub Actionsワークフロー生成に必要な主要ファイル名を最大{max_required_files}個教えてください。"
-             "ファイル名は必ずファイル構造に存在するものにしてください。"
-             "【プロジェクト情報】"
-             "- プロジェクトのローカルパス: {local_path}"
-             "- ファイル構造（ツリー形式）:"
-             "{file_tree}"
-             "- リポジトリの情報:"
-             "{repo_info}"
-             "各RequiredFileには以下の情報を含めてください。"
-             " - name: ファイル名"
-             " - description: ファイルの簡単な説明"
-             " - path: ファイルのパス(プロジェクトのルートからの相対パス)"
-             "ファイルの内容(content)は含めなくてよいです"
-             )
-        ])
+        if state.generate_workflow_required_files:
+            log("info", "主要ファイルの選定を開始します")
+            # LLMによる主要ファイル選定のプロンプトの作成
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "あなたは日本のソフトウェア開発の専門家です。"),
+                ("human", 
+                "以下のプロジェクトのGitHub Actionsワークフロー生成に必要な主要ファイル名を最大{max_required_files}個教えてください。"
+                "ファイル名は必ずファイル構造に存在するものにしてください。また.githubフォルダ内のファイルは除外してください。"
+                "【プロジェクト情報】"
+                "- プロジェクトのローカルパス: {local_path}"
+                "- ファイル構造（ツリー形式）:"
+                "{file_tree}"
+                "- リポジトリの情報:"
+                "{repo_info}"
+                "各RequiredFileには以下の情報を含めてください。"
+                " - name: ファイル名"
+                " - description: ファイルの簡単な説明"
+                " - path: ファイルのパス(プロジェクトのルートからの相対パス)"
+                "ファイルの内容(content)は含めなくてよいです"
+                )
+            ])
 
-        # チェーンの作成
-        chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
+            # チェーンの作成
+            chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
 
-        # チェーンの実行
-        workflow_required_files_result = chain.invoke({
-            "max_required_files": state.max_required_files,
-            "local_path": local_path,
-            "file_tree": file_tree,
-            "repo_info": repo_info,
-        })
+            # チェーンの実行
+            workflow_required_files_result = chain.invoke({
+                "max_required_files": state.max_required_files,
+                "local_path": local_path,
+                "file_tree": file_tree,
+                "repo_info": repo_info,
+            })
 
-        # 主要ファイルの内容の取得
-        for required_file in workflow_required_files_result.workflow_required_files:
-            log("info", f"主要ファイル: {required_file.name} - {required_file.path} - {required_file.description}")
-            get_content_result = github.read_file(local_path, required_file.path)
-            if get_content_result.status != "success":
-                log("error", f"主要ファイルの取得に失敗しました: {required_file.name}")
-            else:
-                required_file.content = get_content_result.info["content"]
-
+            # 主要ファイルの内容の取得
+            for required_file in workflow_required_files_result.workflow_required_files:
+                log("info", f"主要ファイル: {required_file.name} - {required_file.path} - {required_file.description}")
+                get_content_result = github.read_file(local_path, required_file.path)
+                if get_content_result.status != "success":
+                    log("error", f"主要ファイルの取得に失敗しました: {required_file.name}")
+                else:
+                    required_file.content = get_content_result.info["content"]
+            
+            workflow_required_files = workflow_required_files_result.workflow_required_files
+        else:
+            # 主要ファイルの生成をスキップ
+            log("info", "主要ファイルの生成はスキップされました")
+            workflow_required_files = []
         return {
             "local_path": local_path,
             "file_tree": file_tree,
             "repo_info": repo_info,
             "language": repo_info["language"],
-            "workflow_required_files": workflow_required_files_result.workflow_required_files,
+            "workflow_required_files": workflow_required_files,
             "prev_node": "github_repo_parser",
             "node_history": ["github_repo_parser"]
         }

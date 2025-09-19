@@ -55,7 +55,7 @@ def get_agent_prompt():
 def get_non_agent_prompt():
     return [
         ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
-        ("human", get_workflow_prompt_base() + get_output_format_instruction())
+        ("human", get_workflow_prompt_base())
     ]
 class WorkflowGenerator:
     """
@@ -71,11 +71,13 @@ class WorkflowGenerator:
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
-                result =  self._generate_workflow(state, self.agent_is)
+                result, best_practices =  self._generate_workflow(state, self.agent_is)
             elif "workflow_linter" == state.prev_node:
                 result = self._modify_after_lint(state, self.agent_is)
+                best_practices = state.best_practices
             elif "workflow_executor" == state.prev_node:
                 result = self._modify_after_execute(state, self.agent_is)
+                best_practices = state.best_practices
             else:
                 raise ValueError("不正な入力です")
         else:
@@ -109,6 +111,7 @@ class WorkflowGenerator:
 
         return {
             "generate_workflows": [result],
+            "best_practices": best_practices,
             "prev_node": "workflow_generator",
             "node_history": ["workflow_generator"],
             "loop_count": state.loop_count+1
@@ -123,14 +126,19 @@ class WorkflowGenerator:
         github = GitHubTool()
 
         # 推奨されない書き方ですが、一旦stateにbest_practicesを追加
-        state.best_practices = get_yml_best_practices(state.language, state.best_practice_num)
+        if state.generate_best_practices:
+            log("info", "ベストプラクティスの取得を開始します")
+            best_practices = get_yml_best_practices(state)
+        else:
+            log("info", "ベストプラクティスの取得はスキップされました")
+            best_practices = ""
         input = {
                 "local_path": state.local_path,
                 "file_tree": state.file_tree,
                 "repo_info": state.repo_info,
                 "language": state.language,
                 "yml_rules": get_yml_rules(),
-                "yml_best_practices": get_yml_best_practices(state.language, state.best_practice_num)
+                "yml_best_practices": best_practices
             }
         
         if agent_is:
@@ -164,8 +172,8 @@ class WorkflowGenerator:
         if create_branch_result.status != "success":
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
             sys.exit()
-        
-        return result
+
+        return result, best_practices
 
     def _modify_after_lint(self, state: WorkflowState) -> GenerateWorkflow:
         """
