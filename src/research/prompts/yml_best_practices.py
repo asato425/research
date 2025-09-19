@@ -3,10 +3,12 @@ LLMを使用して、特定のプログラミング言語におけるGitHub Acti
 '''
 from research.tools.llm import LLMTool
 from research.log_output.log import log
+from research.main import MODEL_NAME
+from research.workflow_graph.state import WorkflowState
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-llm = LLMTool().create_model(model_name="gemini", temperature=0.0)
+llm = LLMTool().create_model(model_name=MODEL_NAME, temperature=0.0)
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -16,19 +18,25 @@ prompt = ChatPromptTemplate.from_messages(
             "GitHub Actionsのワークフロー設計・運用に精通しています。"
             "これから{programming_language}プロジェクト向けのベストプラクティスをまとめてください。"
             "出力は日本語で、実践的な例や注意点も含めてください。"
+            "特定のツールを前提にせず、複数の選択肢（例: pip, poetry, pipenvなど）がある場合は比較して示してください。"
+            "存在しないファイルやツールを前提とした内容は避け、条件付きでの利用方法を説明してください。"
         ),
         (
             "human",
-            "{programming_language}でGitHub Actionsのワークフローを作成する際のベストプラクティス・推奨事項・パッケージ管理ツール、ビルドツール、テストツール、その他コマンドなどのツールやコマンドの違い・よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、箇条書きで{num}個詳しく教えてください。"
+            "{programming_language}でGitHub Actionsのワークフローを作成する際の"
+            "ベストプラクティス・推奨事項・パッケージ管理ツール・ビルドツール・テストツールなどの違い、"
+            "よくある失敗例・推奨されるyml構造・セキュリティや保守性の観点も含めて、"
+            "箇条書きで{num}個詳しく教えてください。"
+            "可能であればツールごとの使い分けや、状況に応じた推奨事項をまとめてください。"
         )
     ]
 )
-def get_yml_best_practices(programming_language:str, num:int = 10):
+def get_yml_best_practices(state: WorkflowState) -> str:
     '''
     Return
         GitHub Actionsのymlベストプラクティス
     '''
     chain = prompt | llm | StrOutputParser()
-    result = chain.invoke({"programming_language": programming_language, "num": num})
-    log("info", f"{programming_language}プロジェクトのGitHub Actionsのymlベストプラクティスを{num}個取得しました。")
+    result = chain.invoke({"programming_language": state.language, "num": state.best_practice_num})
+    log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
     return result
