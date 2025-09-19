@@ -4,25 +4,32 @@ import argparse
 from datetime import datetime
 
 date_str = datetime.now().strftime("%Y-%m-%d")
+time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
 # ノードの実行制御フラグ
 RUN_GITHUB_REPO_PARSER = True
-RUN_WORKFLOW_GENERATOR = False
+RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = False
 RUN_WORKFLOW_EXECUTER = False
 RUN_EXPLANATION_GENERATOR = False
+
+# 細かい実行制御フラグ
+RUN_ACTIONLINT = True
+RUN_GHALINT = True
+GENERATE_WORKFLOW_REQUIRED_FILES = True
+GENERATE_BEST_PRACTICES = True
 
 # モデルとエージェントの設定
 """
 MODEL_NAMEには"gemini"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
 """
-MODEL_NAME = "gemini"
+MODEL_NAME = "gpt-4"
 AGENT_IS = False and MODEL_NAME.startswith("gpt")
 
 # コマンドライン引数のデフォルト値
-WORK_REF = "test"+date_str  # 作業用ブランチ名
-YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
+WORK_REF = "test_"+MODEL_NAME+"_"+date_str  # 作業用ブランチ名
+YML_FILE_NAME = "ci_" + time_str + ".yml" # 生成されるYAMLファイル名
 MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
 LINT_LOOP_COUNT_MAX = 3 # Lintのループ回数の上限
@@ -88,16 +95,24 @@ def main():
     # コマンドライン引数を解析
     args = parser.parse_args()
 
-    # 要件定義書生成AIエージェントを初期化
+    # ワークフローエージェントを初期化
     agent = WorkflowBuilder(model_name=MODEL_NAME, agent_is=AGENT_IS)
     # エージェントを実行して最終的な出力を取得
     final_state = agent.run(
+        # リポジトリのURLは必須引数
         repo_url=args.repo_url,
+        # ノードの実行制御フラグ
         run_github_parser=RUN_GITHUB_REPO_PARSER,
         run_workflow_generator=RUN_WORKFLOW_GENERATOR and RUN_GITHUB_REPO_PARSER,
         run_linter=RUN_LINTER and RUN_WORKFLOW_GENERATOR,
         run_workflow_executer=RUN_WORKFLOW_EXECUTER and RUN_WORKFLOW_GENERATOR,
         run_explanation_generator=RUN_EXPLANATION_GENERATOR and RUN_WORKFLOW_GENERATOR,
+        # 細かい処理の実行制御フラグ
+        run_actionlint=RUN_ACTIONLINT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
+        run_ghalint=RUN_GHALINT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
+        generate_workflow_required_files=GENERATE_WORKFLOW_REQUIRED_FILES and RUN_GITHUB_REPO_PARSER,
+        generate_best_practices=GENERATE_BEST_PRACTICES and RUN_GITHUB_REPO_PARSER,
+        # その他のパラメータ
         work_ref=args.work_ref,
         yml_file_name=args.yml_file_name,
         max_required_files=args.max_required_files,
