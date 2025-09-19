@@ -24,7 +24,7 @@ GENERATE_BEST_PRACTICES = True
 MODEL_NAMEには"gemini"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
 """
-MODEL_NAME = "gpt-4"
+MODEL_NAME = "gemini"
 AGENT_IS = False and MODEL_NAME.startswith("gpt")
 
 # コマンドライン引数のデフォルト値
