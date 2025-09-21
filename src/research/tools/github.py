@@ -257,11 +257,11 @@ class GitHubTool:
         # 現在あるブランチ名を確認し、すでに存在する場合はそのまま成功を返す
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=local_path, check=True)
-            result = RepoInfoResult(status="success", info=None, message=f"{branch_name}はすでに存在します")
+            result = RepoInfoResult(status="success", info=None, message=f"{branch_name}ブランチはすでに存在します")
         except subprocess.CalledProcessError:
             try:
                 subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
-                result = RepoInfoResult(status="success", info=None, message=f"{branch_name}を作成しました")
+                result = RepoInfoResult(status="success", info=None, message=f"{branch_name}ブランチを作成しました")
             except subprocess.CalledProcessError as e:
                 result = RepoInfoResult(status="error", info=None, message=str(e))
         except Exception as e:
