@@ -3,11 +3,10 @@ from research.workflow_graph.builder import WorkflowBuilder
 import argparse
 from datetime import datetime
 
-date_str = datetime.now().strftime("%Y-%m-%d")
 time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
 # ノードの実行制御フラグ
-RUN_GITHUB_REPO_PARSER = True
+RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = False
 RUN_WORKFLOW_EXECUTER = False
@@ -21,14 +20,14 @@ GENERATE_BEST_PRACTICES = True
 
 # モデルとエージェントの設定
 """
-MODEL_NAMEには"gemini"、"gpt-4"、"gpt-5"、"claude"を指定できます。
+MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
 """
-MODEL_NAME = "gemini"
+MODEL_NAME = "gemini-1.5-pro"
 AGENT_IS = False and MODEL_NAME.startswith("gpt")
 
 # コマンドライン引数のデフォルト値
-WORK_REF = "test_"+MODEL_NAME+"_"+date_str  # 作業用ブランチ名
+WORK_REF = "test_"+MODEL_NAME+"_"+time_str  # 作業用ブランチ名
 YML_FILE_NAME = "ci_" + time_str + ".yml" # 生成されるYAMLファイル名
 MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
@@ -101,6 +100,9 @@ def main():
     final_state = agent.run(
         # リポジトリのURLは必須引数
         repo_url=args.repo_url,
+        # LLMの設定
+        model_name=MODEL_NAME,
+        agent_is=AGENT_IS,
         # ノードの実行制御フラグ
         run_github_parser=RUN_GITHUB_REPO_PARSER,
         run_workflow_generator=RUN_WORKFLOW_GENERATOR and RUN_GITHUB_REPO_PARSER,
