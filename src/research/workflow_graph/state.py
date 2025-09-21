@@ -72,7 +72,8 @@ class WorkflowState(BaseModel):
     ワークフローの進行状況や各ノード間で共有する情報を保持するPydanticモデル。
     必要に応じて属性を追加・修正してください。
     """
-    
+    model_name : str = Field("gemini", description="使用するLLMのモデル名")
+    agent_is : bool = Field(False, description="エージェントモードで動作するかどうか")
     # ノードの実行制御フラグ
     run_github_parser: bool = Field(False, description="github_repo_parserノードを実行するか")
     run_workflow_generator: bool = Field(False, description="workflow_generatorノードを実行するか")
@@ -141,45 +142,48 @@ class WorkflowState(BaseModel):
         return self.summary()
     
     def summary(self) -> str:
-        result = "ノードの実行状況:\n" + \
-                 f"GitHubパーサー: {'実行' if self.run_github_parser else 'スキップ'}\n" + \
-                 f"ワークフロー生成: {'実行' if self.run_workflow_generator else 'スキップ'}\n" + \
-                 f"Lint: {'実行' if self.run_linter else 'スキップ'}\n" + \
-                 f"ワークフロー実行: {'実行' if self.run_workflow_executer else 'スキップ'}\n" + \
-                 f"解説生成: {'実行' if self.run_explanation_generator else 'スキップ'}\n\n" + \
-                 "細かい処理の実行状況:\n" + \
-                 f"actionlint: {'実行' if self.run_actionlint else 'スキップ'}\n" + \
-                 f"ghalint: {'実行' if self.run_ghalint else 'スキップ'}\n" + \
-                 f"主要ファイル生成: {'実行' if self.generate_workflow_required_files else 'スキップ'}\n" + \
-                 f"ベストプラクティス生成: {'実行' if self.generate_best_practices else 'スキップ'}\n" + \
-                 "\n" + \
-                 f"リポジトリURL: {self.repo_url}\n" + \
-                 f"作業用ブランチ: {self.work_ref}\n" + \
-                 f"YAMLファイル名: {self.yml_file_name}\n" + \
-                 f"ループ回数: {self.loop_count}/{self.loop_count_max}\n" + \
-                 f"ノード履歴: {' -> '.join(self.node_history)}\n" + \
-                 f"ローカルパス: {self.local_path}\n" + \
-                 f"言語: {self.language}\n" + \
-                 f"ベストプラクティス: {self.best_practices}\n\n"
+        BLUE = "\033[34m"
+        RESET = "\033[0m"
+        result = (
+            f"{BLUE}ノードの実行状況:{RESET}\n"
+            f"{BLUE}GitHubパーサー:{RESET} {'実行' if self.run_github_parser else 'スキップ'}\n"
+            f"{BLUE}ワークフロー生成:{RESET} {'実行' if self.run_workflow_generator else 'スキップ'}\n"
+            f"{BLUE}Lint:{RESET} {'実行' if self.run_linter else 'スキップ'}\n"
+            f"{BLUE}ワークフロー実行:{RESET} {'実行' if self.run_workflow_executer else 'スキップ'}\n"
+            f"{BLUE}解説生成:{RESET} {'実行' if self.run_explanation_generator else 'スキップ'}\n\n"
+            f"{BLUE}細かい処理の実行状況:{RESET}\n"
+            f"{BLUE}actionlint:{RESET} {'実行' if self.run_actionlint else 'スキップ'}\n"
+            f"{BLUE}ghalint:{RESET} {'実行' if self.run_ghalint else 'スキップ'}\n"
+            f"{BLUE}主要ファイル生成:{RESET} {'実行' if self.generate_workflow_required_files else 'スキップ'}\n"
+            f"{BLUE}ベストプラクティス生成:{RESET} {'実行' if self.generate_best_practices else 'スキップ'}\n\n"
+            f"{BLUE}リポジトリURL:{RESET} {self.repo_url}\n"
+            f"{BLUE}作業用ブランチ:{RESET} {self.work_ref}\n"
+            f"{BLUE}YAMLファイル名:{RESET} {self.yml_file_name}\n"
+            f"{BLUE}ループ回数:{RESET} {self.loop_count}/{self.loop_count_max}\n"
+            f"{BLUE}ノード履歴:{RESET} {' -> '.join(self.node_history)}\n"
+            f"{BLUE}ローカルパス:{RESET} {self.local_path}\n"
+            f"{BLUE}言語:{RESET} {self.language}\n"
+            f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
+        )
 
         if self.workflow_required_files:
-            result += "主要ファイル:\n"
+            result += f"{BLUE}主要ファイル:{RESET}\n"
             for file in self.workflow_required_files:
                 result += file.summary() + "\n\n"
         if self.generate_workflows:
-            result += "生成されたワークフロー:\n"
+            result += f"{BLUE}生成されたワークフロー:{RESET}\n"
             for workflow in self.generate_workflows:
                 result += workflow.summary() + "\n\n"
         if self.actionlint_results:
-            result += "actionlint結果:\n"
+            result += f"{BLUE}actionlint結果:{RESET}\n"
             for lint in self.actionlint_results:
                 result += lint.summary() + "\n\n"
         if self.ghalint_results:
-            result += "ghalint結果:\n"
+            result += f"{BLUE}ghalint結果:{RESET}\n"
             for lint in self.ghalint_results:
                 result += lint.summary() + "\n\n"
         if self.workflow_run_results:
-            result += "ワークフロー実行結果:\n"
+            result += f"{BLUE}ワークフロー実行結果:{RESET}\n"
             for run in self.workflow_run_results:
                 result += run.summary() + "\n\n"
         return result
