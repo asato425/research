@@ -5,6 +5,8 @@ from research.workflow_graph.state import WorkflowState, WorkflowRunResult
 from research.log_output.log import log
 import sys
 from typing import Any
+from datetime import datetime
+
 """
 このモジュールはワークフローの実行を担当します。
 """
@@ -21,9 +23,10 @@ class WorkflowExecutor:
     
 
         # コミット+プッシュ
+        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         push_result = github.commit_and_push(
             local_path=local_path,
-            message="ymlファイルを追加しました"
+            message=time_str+"による自動コミット(ymlファイルの追加)",
         )
         if push_result.status != "success":
             log("error", "コミットorプッシュに失敗したのでプログラムを終了します")
