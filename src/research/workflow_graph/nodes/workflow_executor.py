@@ -17,7 +17,7 @@ class WorkflowExecutor:
 
         local_path = state.local_path
         github = GitHubTool()
-        parser = ParserTool()
+        parser = ParserTool(model_name=state.model_name)
     
 
         # コミット+プッシュ

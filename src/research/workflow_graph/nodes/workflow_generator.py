@@ -67,7 +67,7 @@ class WorkflowGenerator:
         self.agent_is = agent_is
 
     def __call__(self, state: WorkflowState)-> dict[str, Any]:
-
+        
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
@@ -87,6 +87,7 @@ class WorkflowGenerator:
                 generated_text="",
                 tokens_used=0
             )
+            best_practices = state.best_practices
 
         github = GitHubTool()
         # ymlファイルの内容生成後、ブランチの作成、ファイルの作成、書き込みを行う
