@@ -3,12 +3,10 @@ LLMを使用して、特定のプログラミング言語におけるGitHub Acti
 '''
 from research.tools.llm import LLMTool
 from research.log_output.log import log
-from research.main import MODEL_NAME
 from research.workflow_graph.state import WorkflowState
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-llm = LLMTool().create_model(model_name=MODEL_NAME, temperature=0.0)
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -36,6 +34,7 @@ def get_yml_best_practices(state: WorkflowState) -> str:
     Return
         GitHub Actionsのymlベストプラクティス
     '''
+    llm = LLMTool().create_model(model_name=state.model_name)
     chain = prompt | llm | StrOutputParser()
     result = chain.invoke({"programming_language": state.language, "num": state.best_practice_num})
     log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
