@@ -8,9 +8,9 @@ from research.workflow_graph.nodes.explanation_generator import ExplanationGener
 
 class WorkflowBuilder:
     def __init__(self, 
-                 model_name:str = "gemini",
-                 agent_is:bool = False,
-                 ):
+        model_name:str = "gemini",
+        agent_is:bool = False,
+        ):
         self.model_name = model_name
         self.agent_is = agent_is
         
@@ -82,6 +82,7 @@ class WorkflowBuilder:
             run_ghalint: bool,
             generate_workflow_required_files: bool,
             generate_best_practices: bool,
+            model_name: str = "gemini", agent_is: bool = False,
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
             lint_loop_count_max: int = 3, best_practice_num: int = 10) -> WorkflowState:
@@ -115,6 +116,8 @@ class WorkflowBuilder:
         """
         # 初期状態の設定
         initial_state = WorkflowState(
+            model_name=model_name,
+            agent_is=agent_is,
             repo_url=repo_url,
             run_github_parser=run_github_parser,
             run_workflow_generator=run_workflow_generator,
@@ -135,7 +138,7 @@ class WorkflowBuilder:
         # グラフの実行
         final_state = self.graph.invoke(initial_state)
         
-        # ここにLinterやExecutorの結果、ループ回数などの記録を出力することにするかも(main.pyで書くかも)
+        # ここにLinterやExecutorの結果、ループ回数などの記録を出力することにするかも(main.pyで書いている)
 
 
         return WorkflowState(**final_state)
