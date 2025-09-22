@@ -4,7 +4,7 @@ from research.tools.github import GitHubTool
 def test_github():
     github = GitHubTool()
     # テスト用のリポジトリURLを用意
-    repo_url = "https://github.com/asato425/test"
+    repo_url = "https://github.com/asato425/test_python"
     relative_path = "test.txt"
     
     # リポジトリをクローン
