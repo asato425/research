@@ -1,3 +1,4 @@
+
 from pydantic import BaseModel
 from typing import Any
 import subprocess
@@ -122,3 +123,37 @@ class LinterTool:
             log(result.status, f"ghalint: {result.error_message}")
             return result
 
+    def pinact(self, local_path: str) -> dict:
+        """
+        他のlinter関数と同じ引数でpinact runを実行し、結果を返す関数。
+        Args:
+            local_path (str): プロジェクトのルートディレクトリ
+        Returns:
+            dict: 実行結果（status, stdout, stderr）
+        """
+        try:
+            result = subprocess.run(
+                ["pinact", "run"],
+                cwd=local_path,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            status = "success" if result.returncode == 0 else "error"
+            
+            result = {
+                "status": status,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }
+        except Exception as e:
+            result = {
+                "status": "error",
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }
+        
+        log(result["status"], f"pinactの結果 stdout:{result['stdout']}、stderr:{result['stderr']}")
+        return result
