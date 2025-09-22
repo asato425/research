@@ -65,4 +65,13 @@ poetry export -f requirements.txt --output requirements.txt
 poetry run pytest tests/test_github.py # 特定のテストファイルの実行
 
 poetry run pytest tests/ # フォルダ内の全てのテストを実行
+```
 
+## 必要なインストール
+```shell
+brew install pinact
+
+brew install actionlint
+
+brew install suzuki-shunsuke/ghalint/ghalint
+```
