@@ -1,6 +1,7 @@
 # ymlファイルを書くうえでのルールを記述したプロンプトをまとめてください
 from research.log_output.log import log
 YML_RULES = """
+- YAML の内容だけを出力してください。Markdown の ```yaml や ``` は出力しないでください。
 - インデントは GitHub Actions の公式仕様に沿ってください
 - 必ず on: と jobs: を含む完全な GitHub Actions YAML 構造にしてください
 - on:のイベントにはworkflow_dispatchのみを指定する
