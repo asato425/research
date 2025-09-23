@@ -14,7 +14,7 @@ from langchain.tools import Tool
 from typing import Any
 import json
 import sys
-
+import time
 # ワークフロー生成のためのプロンプトを取得
 def get_workflow_prompt_base():
     return (
@@ -68,6 +68,9 @@ class WorkflowGenerator:
 
     def __call__(self, state: WorkflowState)-> dict[str, Any]:
         
+        # 開始時間の記録
+        start_time = time.time()
+        
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
@@ -110,6 +113,10 @@ class WorkflowGenerator:
             log("error", "YAMLファイルへの書き込みに失敗したのでプログラムを終了します")
             sys.exit()
 
+        # 終了時間の記録とログ出力
+        elapsed = time.time() - start_time
+        log("info", f"WorkflowGenerator実行時間: {elapsed:.2f}秒")
+        
         return {
             "generate_workflows": [result],
             "best_practices": best_practices,

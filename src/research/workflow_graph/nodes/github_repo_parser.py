@@ -9,7 +9,7 @@ from research.workflow_graph.state import WorkflowState, WorkflowRequiredFiles
 from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
 import sys
-
+import time
 
 class GitHubRepoParser:
     """GitHubリポジトリ情報の取得を担当するクラス"""
@@ -17,7 +17,9 @@ class GitHubRepoParser:
         self.model_name = model_name
 
     def __call__(self, state: WorkflowState) -> dict[str, Any]:
-        
+
+        # 開始時間の記録
+        start_time = time.time()
         # GitHubパーサーの実行制御
         if not state.run_github_parser:
             log("info", "GitHubパーサーはスキップされました")
@@ -112,6 +114,11 @@ class GitHubRepoParser:
             # 主要ファイルの生成をスキップ
             log("info", "主要ファイルの生成はスキップされました")
             workflow_required_files = []
+        
+        # 終了時間の記録とログ出力
+        elapsed = time.time() - start_time
+        log("info", f"GitHubRepoParser実行時間: {elapsed:.2f}秒")
+        
         return {
             "local_path": local_path,
             "file_tree": file_tree,

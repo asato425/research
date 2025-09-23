@@ -6,6 +6,7 @@ from research.log_output.log import log
 import sys
 from typing import Any
 from datetime import datetime
+import time
 
 """
 このモジュールはワークフローの実行を担当します。
@@ -17,6 +18,9 @@ class WorkflowExecutor:
 
     def __call__(self, state: WorkflowState) -> dict[str, Any]:
 
+        # 開始時間の記録
+        start_time = time.time()
+        
         local_path = state.local_path
         github = GitHubTool()
         parser = ParserTool(model_name=state.model_name)
@@ -73,6 +77,10 @@ class WorkflowExecutor:
                 raw_error=None,
                 parsed_error=None,
             )
+        # 終了時間の記録とログ出力
+        elapsed = time.time() - start_time
+        log("info", f"WorkflowExecutor実行時間: {elapsed:.2f}秒")
+        
         return {
             "workflow_run_results": [result],
             "prev_node": "workflow_executor",
