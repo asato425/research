@@ -155,7 +155,7 @@ class WorkflowState(BaseModel):
             f"{BLUE}actionlint:{RESET} {'実行' if self.run_actionlint else 'スキップ'}\n"
             f"{BLUE}ghalint:{RESET} {'実行' if self.run_ghalint else 'スキップ'}\n"
             f"{BLUE}主要ファイル生成:{RESET} {'実行' if self.generate_workflow_required_files else 'スキップ'}\n"
-            f"{BLUE}ベストプラクティス生成:{RESET} {'実行' if self.generate_best_practices else 'スキップ'}\n\n"
+            #f"{BLUE}ベストプラクティス生成:{RESET} {'実行' if self.generate_best_practices else 'スキップ'}\n\n"
             f"{BLUE}リポジトリURL:{RESET} {self.repo_url}\n"
             f"{BLUE}作業用ブランチ:{RESET} {self.work_ref}\n"
             f"{BLUE}YAMLファイル名:{RESET} {self.yml_file_name}\n"
@@ -163,7 +163,7 @@ class WorkflowState(BaseModel):
             f"{BLUE}ノード履歴:{RESET} {' -> '.join(self.node_history)}\n"
             f"{BLUE}ローカルパス:{RESET} {self.local_path}\n"
             f"{BLUE}言語:{RESET} {self.language}\n"
-            f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
+            #f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
         )
 
         if self.workflow_required_files:
