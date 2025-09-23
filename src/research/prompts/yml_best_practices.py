@@ -34,8 +34,17 @@ def get_yml_best_practices(state: WorkflowState) -> str:
     Return
         GitHub Actionsのymlベストプラクティス
     '''
-    llm = LLMTool().create_model(model_name=state.model_name)
-    chain = prompt | llm | StrOutputParser()
-    result = chain.invoke({"programming_language": state.language, "num": state.best_practice_num})
-    log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
+    if state.language.lower() not in ["python", "javascript","java"]:
+        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がbest_practices/にないためLLMに生成させます。")
+        llm = LLMTool().create_model(model_name=state.model_name)
+        chain = prompt | llm | StrOutputParser()
+        result = chain.invoke({"programming_language": state.language, "num": state.best_practice_num})
+        log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
+    else:
+        # コスト削減のため、生成したものを保存しておいたものを使い回す
+        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がbest_practices/にあるためファイルから取得します。")
+        with open(f'best_practices/{state.language.lower()}.md', 'r', encoding='utf-8') as f:
+            result = f.read()
+        log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを10個取得しました。")
+        
     return result
