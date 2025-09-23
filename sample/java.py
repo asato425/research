@@ -17,7 +17,7 @@ GENERATE_BEST_PRACTICES = True
 
 # モデルとエージェントの設定
 """
-MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
+MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
 AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
 """
 MODEL_NAME = "gemini-1.5-pro"
