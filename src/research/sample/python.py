@@ -126,6 +126,6 @@ def main():
     
 
 # 実行方法:
-# poetry run python sample/python.py
+# poetry run python src/research/sample/python.py
 if __name__ == "__main__":
     main()

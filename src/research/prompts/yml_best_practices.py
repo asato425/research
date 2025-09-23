@@ -42,8 +42,8 @@ def get_yml_best_practices(state: WorkflowState) -> str:
         log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
     else:
         # コスト削減のため、生成したものを保存しておいたものを使い回す
-        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がbest_practices/にあるためファイルから取得します。")
-        with open(f'best_practices/{state.language.lower()}.md', 'r', encoding='utf-8') as f:
+        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がresearch/best_practices/にあるためファイルから取得します。")
+        with open(f'src/research/best_practices/{state.language.lower()}.md', 'r', encoding='utf-8') as f:
             result = f.read()
         log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを10個取得しました。")
         
