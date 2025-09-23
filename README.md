@@ -75,3 +75,7 @@ brew install actionlint
 
 brew install suzuki-shunsuke/ghalint/ghalint
 ```
+
+
+## best_practices
+- 本来LLMに生成させるがコスト削減のためGPT-5-miniで生成させたものを使い回す
