@@ -81,7 +81,7 @@ def main():
         default=LINT_LOOP_COUNT_MAX,
         help="生成とLintのループ回数の上限を設定してください（デフォルト:3）",
     )
-    # "best_practice_num"引数を追加
+    # "best_practice_num"引数を追加、現在はコスト削減のためPython,Javaのベストプラクティスは使い回しており、引数で変更できません
     parser.add_argument(
         "--best_practice_num",
         type=int,
