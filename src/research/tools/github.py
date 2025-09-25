@@ -53,6 +53,11 @@ class WorkflowDispatchResult(BaseModel):
     status: str
     message: str | None = None
 
+class PullRequestResult(BaseModel):
+    status: str
+    message: str
+    pr_url: str | None = None
+
 
 class GitHubTool:
     _server_process = None
@@ -127,7 +132,7 @@ class GitHubTool:
             log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
             self._set_github_token()
 
-        resp = requests.get(f"{self.base_url}/github/info", params={"repo_url": repo_url})
+        resp = requests.get(f"{self.base_url}/github/info", json={"repo_url": repo_url})
         result = RepoInfoResult(**resp.json())
         log(result.status, result.message)
         return result
@@ -405,5 +410,20 @@ class GitHubTool:
             result = RepoInfoResult(status="success", info=file_tree, message=f"{local_path}のファイルツリーを取得しました")
         except Exception as e:
             result = RepoInfoResult(status="error", info=None, message=str(e))
+        log(result.status, result.message)
+        return result
+
+    def create_pull_request(self, repo_url: str, head: str, base: str, title: str, body: str = "") -> PullRequestResult:
+        """
+        Returns:
+            PullRequestResult: status(str), message(str), pr_url(str|None)
+        """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、プルリクエストを作成できません")
+            self._set_github_token()
+
+        payload = {"repo_url": repo_url, "head": head, "base": base, "title": title, "body": body}
+        resp = requests.post(f"{self.base_url}/github/pull_request", json=payload)
+        result = PullRequestResult(**resp.json())
         log(result.status, result.message)
         return result

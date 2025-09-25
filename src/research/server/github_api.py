@@ -51,6 +51,18 @@ class WorkflowDispatchResponse(BaseModel):
     status: str
     message: str | None = None
 
+class PullRequestRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHubリポジトリのURL")
+    head: str = Field(..., description="プルリクエストの元ブランチ名")
+    base: str = Field(..., description="プルリクエストの先ブランチ名")
+    title: str = Field(..., description="プルリクエストのタイトル")
+    body: str | None = Field(None, description="プルリクエストの説明")
+
+class PullRequestResponse(BaseModel):
+    status: str
+    message: str
+    pr_url: str | None = None
+
 def is_github_token_set() -> bool:
     """
     GITHUB_TOKENが環境変数にセットされているか確認する
@@ -220,7 +232,7 @@ def get_latest_workflow_logs(req: WorkflowRequest):
         return WorkflowResponse(status="error", message=str(e), conclusion=None, html_url=None, logs_url=None, failure_reason=None)
 
 @app.get("/github/info", response_model=RepoInfoResponse)
-def get_repository_info(repo_url: str):
+def get_repository_info(req: RepoInfoRequest):
     """
     指定したGitHubリポジトリの情報（説明、スター数、フォーク数、デフォルトブランチなど）を取得する。
     """
@@ -234,7 +246,7 @@ def get_repository_info(repo_url: str):
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
     }
-    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", repo_url)
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
     if not m:
         return RepoInfoResponse(status="error", info=None, message="リポジトリURLの形式が不正です")
     owner, repo = m.group(1), m.group(2)
@@ -281,3 +293,46 @@ def get_repository_info(repo_url: str):
     }
     return RepoInfoResponse(status="success", info=info, message="リポジトリ情報の取得が完了しました")
 
+@app.post("/github/pull_request", response_model=PullRequestResponse)
+def create_pull_request(req: PullRequestRequest):
+    """
+    指定したリポジトリにプルリクエストを作成する
+    Args:
+        repo_url (str): リポジトリURL
+            head (str): プルリクのheadブランチ名
+            base (str): マージ先のbaseブランチ名
+            title (str): PRタイトル
+            body (str): PR本文
+        Returns:
+            PullRequestResult: status(str), message(str), pr_url(str|None)
+        """
+    if not is_github_token_set():
+        return PullRequestResponse(status="error", message="GITHUB_TOKENがセットされていません", pr_url=None)
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    import re
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
+    if not m:
+        return PullRequestResponse(status="error", message="リポジトリURLの形式が不正です", pr_url=None)
+    owner, repo = m.group(1), m.group(2)
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
+
+    data = {
+        "title": req.title,
+        "body": req.body,
+        "head": req.head,
+        "base": req.base
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=data)
+        if resp.status_code in (200, 201):
+            pr_url = resp.json().get("html_url")
+            result = PullRequestResponse(status="success", message="プルリクエストを作成しました", pr_url=pr_url)
+        else:
+            result = PullRequestResponse(status="error", message=f"APIエラー: {resp.status_code} {resp.text}", pr_url=None)
+    except Exception as e:
+        result = PullRequestResponse(status="error", message=str(e), pr_url=None)
+    return result
