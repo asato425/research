@@ -15,15 +15,6 @@ curl -sSL https://install.python-poetry.org | python3 -
 ```bash
 poetry install
 ```
-
-### 3. 仮想環境の有効化
-
-```bash
-poetry env activate
-
-# 次に表示されたコマンドをコピーして実行
-```
-
 ### 4. パッケージの追加
 
 ```bash
@@ -67,13 +58,27 @@ poetry run pytest tests/test_github.py # 特定のテストファイルの実行
 poetry run pytest tests/ # フォルダ内の全てのテストを実行
 ```
 
-## 必要なインストール
+## 必要なインストールなど
 ```shell
+# インストール
 brew install pinact
 
 brew install actionlint
 
 brew install suzuki-shunsuke/ghalint/ghalint
+
+# 環境設定
+touch .env
+# このファイルに必要なAPIキーを設定してください
+# 例）
+# GITHUB_TOKEN=********
+# # GPTの環境変数
+# OPENAI_API_KEY= "******"
+# #Gemini の環境変数
+# GOOGLE_API_KEY=******* ※ダブルクォーテーションで囲まないでください
+# #Anthropic の環境変数
+# ANTHROPIC_API_KEY="******"
+
 ```
 
 
