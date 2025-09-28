@@ -6,13 +6,10 @@ from research.workflow_graph.state import GenerateWorkflow, WorkflowState
 from research.log_output.log import log
 from research.tools.llm import LLMTool
 from research.tools.github import GitHubTool
-from research.tools.rag import RAGTool
 from research.prompts.yml_rule import get_yml_rules
 from research.prompts.yml_best_practices import get_yml_best_practices
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.tools import Tool
 from typing import Any
-import json
 import sys
 import time
 # ワークフロー生成のためのプロンプトを取得
@@ -31,28 +28,7 @@ def get_workflow_prompt_base():
         "{yml_best_practices}"
     )
 
-# 出力形式の指示を取得(エージェント利用の際、出力形式をwith_structured_outputで指定できないため)
-def get_output_format_instruction():
-    return (
-        "次の形式で出力してください（説明文は不要）:\n"
-        "{"
-        "\"status\":\"success\","
-        "\"generated_text\":\"print('Hello, world!')\","
-        "\"tokens_used\":42"
-        "}\n"
-        "statusは生成に成功したらsuccess、失敗したらfailとしてください。"
-        "generated_textは生成されたテキスト、tokens_usedは使用されたトークン数をそれぞれ記載してください。"
-    )
-
-# エージェントプロンプトを取得
-def get_agent_prompt():
-    return [
-        ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。toolとして登録されている関数やAPIも必要に応じて活用できます。"),
-        ("human", get_workflow_prompt_base() + get_output_format_instruction() + "\n{agent_scratchpad}")
-    ]
-
-# 非エージェントプロンプトを取得
-def get_non_agent_prompt():
+def get_prompt():
     return [
         ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
         ("human", get_workflow_prompt_base())
@@ -62,9 +38,8 @@ class WorkflowGenerator:
     ワークフローの生成・修正を担当するクラス。
     このクラス自体はグラフのノードとしてLangGraph等で利用されることを想定。
     """
-    def __init__(self, model_name: str = "gemini", agent_is : bool = False):
+    def __init__(self, model_name: str = "gemini"):
         self.model_name = model_name
-        self.agent_is = agent_is
 
     def __call__(self, state: WorkflowState)-> dict[str, Any]:
         
@@ -74,12 +49,12 @@ class WorkflowGenerator:
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
-                result, best_practices =  self._generate_workflow(state, self.agent_is)
+                result, best_practices =  self._generate_workflow(state)
             elif "workflow_linter" == state.prev_node:
-                result = self._modify_after_lint(state, self.agent_is)
+                result = self._modify_after_lint(state)
                 best_practices = state.best_practices
             elif "workflow_executor" == state.prev_node:
-                result = self._modify_after_execute(state, self.agent_is)
+                result = self._modify_after_execute(state)
                 best_practices = state.best_practices
             else:
                 raise ValueError("不正な入力です")
@@ -125,7 +100,7 @@ class WorkflowGenerator:
             "loop_count": state.loop_count+1
         }
 
-    def _generate_workflow(self, state:WorkflowState, agent_is: bool = False)-> GenerateWorkflow:
+    def _generate_workflow(self, state:WorkflowState)-> GenerateWorkflow:
         """
         リポジトリ情報からワークフロー情報を生成
         """
@@ -149,29 +124,18 @@ class WorkflowGenerator:
                 "yml_best_practices": best_practices
             }
         
-        if agent_is:
-            rag = RAGTool()
-            tools = [
-                Tool.from_function(github.read_file, name="read file", description="リポジトリの特定のファイルの内容を取得する"),
-                llm.retriever_to_tool(rag.rag_tavily)
-            ]
+        model = llm.create_model(
+            model_name=self.model_name, 
+            output_model=GenerateWorkflow
+        )
+        prompt = ChatPromptTemplate.from_messages(get_prompt())
+        chain = prompt | model
+        result = chain.invoke(input)
 
-            prompt = ChatPromptTemplate.from_messages(get_agent_prompt())
-        
-            agent = llm.create_agent(tools=tools, prompt=prompt)
-            output = agent.invoke(input)
-            data = json.loads(output)
-            result = GenerateWorkflow(**data)
-            log(result.status, "エージェントを利用し、ワークフローを生成しました")
-        else:
-            model = llm.create_model(
-                model_name=self.model_name, 
-                output_model=GenerateWorkflow
-            )
-            prompt = ChatPromptTemplate.from_messages(get_non_agent_prompt())
-            chain = prompt | model
-            result = chain.invoke(input)
-            log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
+        if result.status != "success":
+            log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
+            sys.exit()
+        log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
 
         create_branch_result = github.create_working_branch(
             local_path=state.local_path,
