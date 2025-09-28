@@ -63,13 +63,39 @@ class WorkflowBuilder:
         """
             Lint成功時の処理を行うメソッド
         """
-        return (state.actionlint_results[-1].status == "success" and state.ghalint_results[-1].status == "success") or state.loop_count >= state.lint_loop_count_max
-    
+        # Lint結果が空=Lint実行をスキップしているならTrue
+        if len(state.lint_results) == 0:
+            return True
+        
+        # 最新のLint結果がsuccessならTrue
+        if state.lint_results[-1].status == "success":
+            return True
+        
+        # ループ回数が上限に達しているならTrue
+        if state.loop_count >= state.lint_loop_count_max:
+            return True
+
+        # それ以外はFalse
+        return False
+
     def _execute_success(self, state: WorkflowState) -> bool:
         """
             ワークフロー実行成功時の処理を行うメソッド
         """
-        return state.workflow_run_results[-1].status == "success" or state.loop_count >= state.loop_count_max
+        # ワークフロー実行結果が空=実行をスキップしているならTrue
+        if len(state.workflow_run_results) == 0:
+            return True
+
+        # 最新のワークフロー実行結果がsuccessならTrue
+        if state.workflow_run_results[-1].status == "success":
+            return True 
+        
+        # ループ回数が上限に達しているならTrue
+        if state.loop_count >= state.loop_count_max:
+            return True
+
+        # それ以外はFalse
+        return False
 
 
     def run(self, repo_url: str, 
@@ -80,6 +106,7 @@ class WorkflowBuilder:
             run_explanation_generator: bool,
             run_actionlint: bool,
             run_ghalint: bool,
+            run_pinact: bool,
             generate_workflow_required_files: bool,
             generate_best_practices: bool,
             model_name: str = "gemini", agent_is: bool = False,
@@ -99,11 +126,12 @@ class WorkflowBuilder:
             run_explanation_generator (bool): explanation_generatorノードを実行するか
 
             **細かい処理の実行制御フラグ**
-            run_actionlint (bool): actionlintノードを実行するか
-            run_ghalint (bool): ghalintノードを実行するか
-            generate_workflow_required_files (bool): workflow_required_filesノードを実行するか
-            generate_best_practices (bool): best_practicesノードを実行する
-            
+            run_actionlint (bool): actionlintを実行するか
+            run_ghalint (bool): ghalintを実行するか
+            run_pinact (bool): pinactを実行するか
+            generate_workflow_required_files (bool): workflow_required_filesを生成するか
+            generate_best_practices (bool): best_practicesを生成するか
+
             **その他のパラメータ**
             work_ref (str): 作業用のブランチの名前(初期値: "test")
             yml_file_name (str): 生成されたYAMLファイルの名前(初期値: "ci.yml")
@@ -126,6 +154,7 @@ class WorkflowBuilder:
             run_explanation_generator=run_explanation_generator,
             run_actionlint=run_actionlint,
             run_ghalint=run_ghalint,
+            run_pinact=run_pinact,
             generate_workflow_required_files=generate_workflow_required_files,
             generate_best_practices=generate_best_practices,
             work_ref=work_ref,
