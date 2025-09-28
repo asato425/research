@@ -5,23 +5,22 @@ import argparse
 # ノードの実行制御フラグ
 RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
-RUN_LINTER = False
+RUN_LINTER = True
 RUN_WORKFLOW_EXECUTER = False
 RUN_EXPLANATION_GENERATOR = True
 
 # 細かい実行制御フラグ
 RUN_ACTIONLINT = True
 RUN_GHALINT = True
+RUN_PINACT = True
 GENERATE_WORKFLOW_REQUIRED_FILES = True
 GENERATE_BEST_PRACTICES = True
 
 # モデルとエージェントの設定
 """
-MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
-AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
+MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
 """
-MODEL_NAME = "gemini-2.5-pro"
-AGENT_IS = False and MODEL_NAME.startswith("gpt")
+MODEL_NAME = "gemini-2.5-flash"
 
 # コマンドライン引数のデフォルト値
 WORK_REF = "work_"+MODEL_NAME  # 作業用ブランチ名
@@ -93,14 +92,13 @@ def main():
     args = parser.parse_args()
 
     # ワークフローエージェントを初期化
-    agent = WorkflowBuilder(model_name=MODEL_NAME, agent_is=AGENT_IS)
+    agent = WorkflowBuilder(model_name=MODEL_NAME)
     # エージェントを実行して最終的な出力を取得
     final_state = agent.run(
         # リポジトリのURLは必須引数
         repo_url=args.repo_url,
         # LLMの設定
         model_name=MODEL_NAME,
-        agent_is=AGENT_IS,
         # ノードの実行制御フラグ
         run_github_parser=RUN_GITHUB_REPO_PARSER,
         run_workflow_generator=RUN_WORKFLOW_GENERATOR and RUN_GITHUB_REPO_PARSER,
@@ -110,6 +108,7 @@ def main():
         # 細かい処理の実行制御フラグ
         run_actionlint=RUN_ACTIONLINT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
         run_ghalint=RUN_GHALINT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
+        run_pinact=RUN_PINACT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
         generate_workflow_required_files=GENERATE_WORKFLOW_REQUIRED_FILES and RUN_GITHUB_REPO_PARSER,
         generate_best_practices=GENERATE_BEST_PRACTICES and RUN_GITHUB_REPO_PARSER,
         # その他のパラメータ
