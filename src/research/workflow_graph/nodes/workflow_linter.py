@@ -28,7 +28,6 @@ class WorkflowLinter:
         start_time = time.time()
 
         lint_result_list = []
-        actionlint_result = []
         if state.run_linter:
 
             linter = LinterTool()
