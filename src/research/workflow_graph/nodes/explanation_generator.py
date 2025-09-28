@@ -34,7 +34,7 @@ class ExplanationGenerator:
    
             prompt = ChatPromptTemplate.from_messages(
             [
-                ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
+                ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
                 ("human",
                     "以下のYAMLファイルの内容を初心者でもわかりやすく日本語で解説してください。\n"
                     "この解説はプルリクエストの説明文にそのまま使える内容にしてください。\n"
