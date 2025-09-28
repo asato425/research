@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import operator
 from typing import Annotated, Optional
+from typing import Any
 
 
 """
@@ -48,11 +49,11 @@ class LintResult(BaseModel):
     Lint結果とそのパース結果を保持する。
     """
     status: str = Field(..., description="Lint結果の状態")
-    raw_error: Optional[str] = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
+    raw_error: Any = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
 
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略"
+        return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
 
 class WorkflowRunResult(BaseModel):
     """
