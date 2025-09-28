@@ -57,7 +57,12 @@ def agent(repo_url: str):
     ]
     prompt = ChatPromptTemplate.from_messages(prompt)
 
-    agent = llm.create_agent(tools=tools, prompt=prompt)
+    agent = llm.create_agent(
+        tools=tools,
+        prompt=prompt,
+        model_name="gpt-4",
+        max_iterations=5
+    )
     input = {"repo_url": repo_url}
     output = agent.invoke(input)
     log("info", f"エージェントの実行が完了しました。出力: {str(output)}")
