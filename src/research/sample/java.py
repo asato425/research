@@ -7,7 +7,7 @@ RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(gene
 RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = False
 RUN_WORKFLOW_EXECUTER = False
-RUN_EXPLANATION_GENERATOR = False
+RUN_EXPLANATION_GENERATOR = True
 
 # 細かい実行制御フラグ
 RUN_ACTIONLINT = True
@@ -17,10 +17,10 @@ GENERATE_BEST_PRACTICES = True
 
 # モデルとエージェントの設定
 """
-MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
+MODEL_NAMEには"gemini-1.5-flash"、"gemini-1.5-pro"、"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
 AGENT_ISにはTrueまたはFalseを指定できます。MODEL_NAMEが"gpt"のみTrueを指定できます。
 """
-MODEL_NAME = "gemini-1.5-pro"
+MODEL_NAME = "gemini-2.5-pro"
 AGENT_IS = False and MODEL_NAME.startswith("gpt")
 
 # コマンドライン引数のデフォルト値
