@@ -73,7 +73,6 @@ class WorkflowState(BaseModel):
     必要に応じて属性を追加・修正してください。
     """
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
-    agent_is : bool = Field(False, description="エージェントモードで動作するかどうか")
     # ノードの実行制御フラグ
     run_github_parser: bool = Field(False, description="github_repo_parserノードを実行するか")
     run_workflow_generator: bool = Field(False, description="workflow_generatorノードを実行するか")
