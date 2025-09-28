@@ -43,7 +43,7 @@ class WorkflowLinter:
                 actionlint_result = LintResult(
                     status=actionlint_result.status,
                     raw_error=actionlint_result.raw_output,
-                    parsed_error=parse_result
+                    parsed_error=parse_result.parse_details
                 )
                 lint_result_list.append(actionlint_result)
             else:
@@ -68,7 +68,7 @@ class WorkflowLinter:
                 ghalint_result = LintResult(
                     status=ghalint_result.status,
                     raw_error=ghalint_result.raw_output,
-                    parsed_error=parse_result
+                    parsed_error=parse_result.parse_details
                 )
                 lint_result_list.append(ghalint_result)
             else:

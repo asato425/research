@@ -13,7 +13,7 @@ from typing import Any
 import sys
 import time
 # ワークフロー生成のためのプロンプトを取得
-def get_workflow_prompt_base():
+def get_generate_workflow_prompt():
     return (
         "以下の条件・情報をもとに、{language}プロジェクト向けのGitHub Actionsワークフロー（YAML）を生成してください。"
         "【プロジェクト情報】"
@@ -28,10 +28,18 @@ def get_workflow_prompt_base():
         "{yml_best_practices}"
     )
 
-def get_prompt():
+def get_modify_after_lint_prompt():
+    return (
+        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
+        "- GitHub Actionsワークフロー（YAML）の内容:"
+        "{workflow_content}"
+        "- Lintエラーの内容:"
+        "{lint_errors}"
+    )
+def get_base_prompt(human_prompt: str):
     return [
         ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
-        ("human", get_workflow_prompt_base())
+        ("human", human_prompt)
     ]
 class WorkflowGenerator:
     """
@@ -128,7 +136,7 @@ class WorkflowGenerator:
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
-        prompt = ChatPromptTemplate.from_messages(get_prompt())
+        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_generate_workflow_prompt()))
         chain = prompt | model
         result = chain.invoke(input)
 
@@ -153,11 +161,35 @@ class WorkflowGenerator:
         lint_resultにはファイルの内容とlint結果を含む
         """
         # lint_resultをもとにworkflowを修正する処理
-        result = GenerateWorkflow(
-            status="success",
-            generated_text="",
-            tokens_used=1
+        lint_result = state.lint_results[-1]
+        if lint_result.status == "success":
+            log("info", "lint_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
+            sys.exit()
+        
+        if lint_result.status == "linter_error":
+            log("error", "lint_result.statusがlinter_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
+            sys.exit()
+
+        llm = LLMTool()
+        
+        model = llm.create_model(
+            model_name=self.model_name, 
+            output_model=GenerateWorkflow
         )
+        
+        input = {
+            "workflow_content": state.generate_workflows[-1].generated_text,
+            "lint_errors": state.lint_results[-1].parsed_error
+        }
+        
+        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_modify_after_lint_prompt()))
+        chain = prompt | model
+        result = chain.invoke(input)
+
+        if result.status != "success":
+            log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
+            sys.exit()
+        log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
         return result
 
     def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
