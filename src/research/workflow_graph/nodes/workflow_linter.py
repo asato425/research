@@ -27,6 +27,8 @@ class WorkflowLinter:
         # 開始時間の記録
         start_time = time.time()
 
+        lint_result_list = []
+        actionlint_result = []
         if state.run_linter:
 
             linter = LinterTool()
@@ -44,6 +46,7 @@ class WorkflowLinter:
                     raw_error=actionlint_result.raw_output,
                     parsed_error=parse_result
                 )
+                lint_result_list.append(actionlint_result)
             else:
                 log("info", "actionlintによるLintはスキップされました")
                 actionlint_result = LintResult(
@@ -52,7 +55,13 @@ class WorkflowLinter:
                     parsed_error=None
                 )
 
-            if state.run_ghalint:
+            if state.run_pinact and actionlint_result.status == "success":
+                log("info", "actionlintによるLintは成功またはスキップされたのでpinactでSHAに変換します")
+                linter.pinact(local_path)
+            else:
+                log("info", "pinactはスキップします")
+            
+            if state.run_ghalint and actionlint_result.status == "success":
                 log("info", "ghalintによるLintを開始します")
                 # ghalintによるチェック
                 ghalint_result = linter.ghalint(local_path)
@@ -62,32 +71,24 @@ class WorkflowLinter:
                     raw_error=ghalint_result.raw_output,
                     parsed_error=parse_result
                 )
+                lint_result_list.append(ghalint_result)
             else:
                 log("info", "ghalintによるLintはスキップされました")
-                ghalint_result = LintResult(
-                    status="success",
-                    raw_error=None,
-                    parsed_error=None
-                )
+            
         else:
             log("info", "WorkflowLinterはスキップされました")
-            actionlint_result = LintResult(
+            lint_result = LintResult(
                 status="success",
                 raw_error=None,
                 parsed_error=None
             )
-            ghalint_result = LintResult(
-                status="success",
-                raw_error=None,
-                parsed_error=None
-            )
+            lint_result_list.append(lint_result)
     
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
         log("info", f"WorkflowLinter実行時間: {elapsed:.2f}秒")
         return {
-            "actionlint_results": [actionlint_result],
-            "ghalint_results": [ghalint_result],
+            "lint_results": lint_result_list,
             "prev_node": "workflow_linter",
             "node_history": ["workflow_linter"]
         }
