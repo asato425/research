@@ -62,7 +62,7 @@ class ExplanationGenerator:
             result = "解説文は生成されませんでした"
             
         # プルリクエストの作成
-        github.create_pull_request(repo_url=state.repo_url, head=state.work_ref, base=state.repo_info["default_branch"], title="GitHubワークフローの説明文", body=result)
+        github.create_pull_request(repo_url=state.repo_url, head=state.work_ref, base=state.repo_info["default_branch"], title="GitHubワークフローファイルの作成", body=result)
         # リポジトリの削除
         github.delete_cloned_repository(state.local_path)
             
