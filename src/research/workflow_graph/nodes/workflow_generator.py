@@ -38,7 +38,7 @@ def get_modify_after_lint_prompt():
     )
 def get_base_prompt(human_prompt: str):
     return [
-        ("user", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
+        ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
         ("human", human_prompt)
     ]
 class WorkflowGenerator:
