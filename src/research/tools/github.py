@@ -63,11 +63,20 @@ class GitHubTool:
     _server_process = None
 
     def __init__(self, base_url: str = "http://localhost:8000"):
+        """
+        GitHubToolのインスタンスを初期化し、APIサーバーを起動する。
+
+        Args:
+            base_url (str): APIサーバーのベースURL（デフォルト: http://localhost:8000）
+        """
         self.base_url = base_url
         self._start_github_api_server()
         atexit.register(self._stop_github_api_server)
 
     def _start_github_api_server(self) -> None:
+        """
+        FastAPIベースのGitHub APIサーバーをバックグラウンドで起動する。
+        """
         if GitHubTool._server_process is not None:
             return
         GitHubTool._server_process = subprocess.Popen([
@@ -87,6 +96,9 @@ class GitHubTool:
             log("error", "github_apiサーバーの起動に失敗しました")
 
     def _stop_github_api_server(self) -> None:
+        """
+        バックグラウンドで起動したGitHub APIサーバーを停止する。
+        """
         if GitHubTool._server_process is not None:
             GitHubTool._server_process.terminate()
             GitHubTool._server_process.wait()
@@ -95,7 +107,10 @@ class GitHubTool:
 
     def _set_github_token(self) -> None:
         """
-        ターミナルからGitHubトークンを安全に入力させ、環境変数GITHUB_TOKENにセットする
+        ターミナルからGitHubトークンを安全に入力させ、環境変数GITHUB_TOKENにセットする。
+
+        Returns:
+            None
         """
         token = getpass.getpass("GitHubトークンを入力してください（入力は非表示です）: ")
         os.environ["GITHUB_TOKEN"] = token
@@ -103,7 +118,8 @@ class GitHubTool:
 
     def _is_github_token_set(self) -> bool:
         """
-        GITHUB_TOKENが環境変数にセットされているか確認する
+        GITHUB_TOKENが環境変数にセットされているか確認する。
+
         Returns:
             bool: セットされていればTrue、なければFalse
         """
@@ -111,8 +127,16 @@ class GitHubTool:
     
     def fork_repository(self, repo_url: str) -> ForkResult:
         """
+        指定したGitHubリポジトリをforkし、fork先のURLを返す。
+
+        Args:
+            repo_url (str): ForkしたいGitHubリポジトリのURL
+
         Returns:
-            ForkResult: status(str), message(str), fork_url(str|None)
+            ForkResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                fork_url (str|None): フォーク先リポジトリのURL（成功時のみ）
         """
         if not self._is_github_token_set():
             log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
@@ -125,8 +149,16 @@ class GitHubTool:
 
     def get_repository_info(self, repo_url: str) -> RepoInfoResult:
         """
+        指定したGitHubリポジトリの情報（説明、スター数、フォーク数、デフォルトブランチなど）を取得する。
+
+        Args:
+            repo_url (str): 情報取得したいGitHubリポジトリのURL
+
         Returns:
-            RepoInfoResult: status(str), info(dict|None), message(str|None)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                info (dict|None): リポジトリ情報の辞書（full_name, description, stargazers_count, forks_count, ...）
+                message (str|None): 実行結果の説明メッセージ
         """
         if not self._is_github_token_set():
             log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
@@ -139,8 +171,18 @@ class GitHubTool:
 
     def clone_repository(self, repo_url: str, local_path: str = None) -> CloneResult:
         """
+        指定したGitHubリポジトリをローカルにクローンする。
+
+        Args:
+            repo_url (str): クローンしたいGitHubリポジトリのURL
+            local_path (str, optional): クローン先のローカルパス。未指定時はデフォルトディレクトリに作成。
+
         Returns:
-            CloneResult: status(str), message(str), local_path(str|None), repo_url(str|None)
+            CloneResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                local_path (str|None): クローン先のローカルパス
+                repo_url (str|None): クローン元リポジトリのURL
         """
         if local_path is None:
             repo_name = repo_url.rstrip('/').split('/')[-1]
@@ -164,8 +206,17 @@ class GitHubTool:
 
     def commit_and_push(self, local_path: str, message: str) -> PushResult:
         """
+        指定したローカルリポジトリでadd/commit/pushを実行し、コミットSHAを返す。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            message (str): コミットメッセージ
+
         Returns:
-            PushResult: status(str), message(str), commit_sha(str|None)
+            PushResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                commit_sha (str|None): 最新コミットのSHA（成功時のみ）
         """
         # add/commit
         try:
@@ -211,12 +262,16 @@ class GitHubTool:
     def dispatch_workflow(self, repo_url: str, ref: str, workflow_id: str) -> WorkflowDispatchResult:
         """
         指定したワークフローをworkflow_dispatchで手動実行する。
+
         Args:
             repo_url (str): リポジトリURL
             ref (str): 実行したいブランチ名（例: main）
-            file_name (str): ワークフローのファイル名（例: ci.yml）
+            workflow_id (str): ワークフローのファイル名またはID（例: ci.yml, 1234567）
+
         Returns:
-            WorkflowDispatchResult: status(str), message(str)
+            WorkflowDispatchResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str|None): 実行結果の説明メッセージ
         """
         if not self._is_github_token_set():
             log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
@@ -230,8 +285,20 @@ class GitHubTool:
     
     def get_latest_workflow_logs(self, repo_url: str, commit_sha: str) -> WorkflowResult:
         """
+        指定したコミットSHAに対応する最新のGitHub Actionsワークフローの実行結果・ログを取得する。
+
+        Args:
+            repo_url (str): GitHubリポジトリのURL
+            commit_sha (str): 対象コミットのSHA
+
         Returns:
-            WorkflowResult: status(str), message(str), conclusion(str|None), html_url(str|None), logs_url(str|None), failure_reason(str|None)
+            WorkflowResult:
+                status (str): ワークフローの状態（例: "completed", "in_progress", "error" など）
+                message (str): 実行結果の説明メッセージ
+                conclusion (str|None): ワークフローの最終結論（"success", "failure" など）
+                html_url (str|None): 実行結果のGitHubページURL
+                logs_url (str|None): ログ取得用URL
+                failure_reason (str|None): 失敗時の詳細ログや理由
         """
         if not self._is_github_token_set():
             log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
@@ -245,8 +312,17 @@ class GitHubTool:
 
     def create_working_branch(self, local_path: str, branch_name: str) -> RepoOpResult:
         """
+        指定したローカルリポジトリで新しい作業用ブランチを作成する。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            branch_name (str): 作成するブランチ名
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoOpResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                path (str|None): 対象パス（未使用）
         """
         dev_repo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
         local_path_abs = os.path.abspath(local_path) if local_path else None
@@ -275,10 +351,19 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def create_file(self, local_path: str, relative_path: str) -> RepoOpResult:
+    def create_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
         """
+        指定したローカルリポジトリ内に新しいファイルを作成する。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 作成するファイルのパス（リポジトリルートからの相対パス）
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -296,10 +381,20 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoOpResult:
+    def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoInfoResult:
         """
+        指定したファイルに内容を書き込む。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 書き込み対象ファイルのパス（リポジトリルートからの相対パス）
+            content (str): 書き込む内容
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         try:
@@ -312,10 +407,19 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def delete_file(self, local_path: str, relative_path: str) -> RepoOpResult:
+    def delete_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
         """
+        指定したファイルを削除する。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 削除対象ファイルのパス（リポジトリルートからの相対パス）
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
@@ -330,10 +434,19 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def delete_folder(self, local_path: str, relative_path: str) -> RepoOpResult:
+    def delete_folder(self, local_path: str, relative_path: str) -> RepoInfoResult:
         """
+        指定したフォルダを削除する。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 削除対象フォルダのパス（リポジトリルートからの相対パス）
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoOpResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                info (str|None): 未使用
         """
         folder_path = os.path.join(local_path, relative_path)
         if not os.path.exists(folder_path):
@@ -351,8 +464,16 @@ class GitHubTool:
 
     def delete_cloned_repository(self, local_path: str) -> RepoOpResult:
         """
+        指定したローカルリポジトリのディレクトリを削除する。
+
+        Args:
+            local_path (str): 削除対象リポジトリのローカルパス
+
         Returns:
-            RepoOpResult: status(str), message(str), path(str|None)
+            RepoOpResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                path (str|None): 対象パス（未使用）
         """
         if not local_path:
             result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
@@ -372,10 +493,19 @@ class GitHubTool:
             log(result.status, result.message)
             return result
 
-    def read_file(self, local_path: str, relative_path: str) -> RepoOpResult:
+    def read_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
         """
+        指定したファイルの内容を読み込む。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 読み込み対象ファイルのパス（リポジトリルートからの相対パス）
+
         Returns:
-            RepoInfoResult: status(str), info(dict|None), message(str)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                info (dict|None): {"file_path": ファイルパス, "content": ファイル内容}
+                message (str): 実行結果の説明メッセージ
         """
         file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
@@ -394,8 +524,16 @@ class GitHubTool:
 
     def get_file_tree(self, local_path: str) -> RepoInfoResult:
         """
+        指定したローカルリポジトリのファイルツリー情報を取得する。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+
         Returns:
-            RepoInfoResult: status(str), info(dict|None), message(str)
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                info (dict|None): {ファイルパス: {"size": サイズ, "modified": 更新時刻}, ...}
+                message (str): 実行結果の説明メッセージ
         """
         if not os.path.exists(local_path):
             result = RepoInfoResult(status="not_found", info=None, message=f"{local_path} は存在しません。")
@@ -415,8 +553,20 @@ class GitHubTool:
 
     def create_pull_request(self, repo_url: str, head: str, base: str, title: str, body: str = "") -> PullRequestResult:
         """
+        指定したリポジトリにプルリクエストを作成する。
+
+        Args:
+            repo_url (str): リポジトリURL
+            head (str): プルリクエストの元ブランチ名
+            base (str): プルリクエストの先ブランチ名
+            title (str): プルリクエストのタイトル
+            body (str, optional): プルリクエストの説明
+
         Returns:
-            PullRequestResult: status(str), message(str), pr_url(str|None)
+            PullRequestResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+                pr_url (str|None): 作成されたプルリクエストのURL（成功時のみ）
         """
         if not self._is_github_token_set():
             log("error", "GITHUB_TOKENがセットされていないため、プルリクエストを作成できません")

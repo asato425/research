@@ -23,14 +23,25 @@ class LintResult(BaseModel):
 class LinterTool:
     def __init__(self):
         """
+        LinterToolのインスタンスを初期化する。
+
         Returns:
             None
         """
 
     def actionlint(self, local_path: str) -> LintResult:
         """
+        指定ディレクトリでactionlintを実行し、結果をLintResultで返す。
+
+        Args:
+            local_path (str): プロジェクトのルートディレクトリ
+
         Returns:
-            LintResult: local_path(str|None), raw_output(Any), status(str|None), error_message(str|None)
+            LintResult:
+                local_path (str|None): 対象ディレクトリのパス
+                raw_output (Any): actionlintの生出力（JSONまたはstr）
+                status (str|None): 実行結果のステータス（None=未実行, 'success'=エラーなし, 'fail'=lintエラー, 'linter_error'=コマンド失敗）
+                error_message (str|None): エラーメッセージや説明
         """
         if not os.path.exists(local_path):
             result = LintResult(
@@ -83,11 +94,17 @@ class LinterTool:
 
     def ghalint(self, local_path: str) -> LintResult:
         """
-        ghalintの出力をそのままprintし、返り値はLintResult（raw_outputのみセット）
-        status: None=未実行, success=エラーなし, fail=lintエラー, linter_error=コマンド実行失敗
+        指定ディレクトリでghalintを実行し、結果をLintResultで返す。
+
+        Args:
+            local_path (str): プロジェクトのルートディレクトリ
 
         Returns:
-            LintResult: local_path(str|None), raw_output(Any), status(str|None), error_message(str|None)
+            LintResult:
+                local_path (str|None): 対象ディレクトリのパス
+                raw_output (Any): ghalintの標準エラー出力（str）
+                status (str|None): 実行結果のステータス（None=未実行, 'success'=エラーなし, 'fail'=lintエラー, 'linter_error'=コマンド失敗）
+                error_message (str|None): エラーメッセージや説明
         """
         if not os.path.exists(local_path):
             result = LintResult(
@@ -130,11 +147,17 @@ class LinterTool:
 
     def pinact(self, local_path: str) -> dict:
         """
-        他のlinter関数と同じ引数でpinact runを実行し、結果を返す関数。
+        指定ディレクトリでpinact runを実行し、結果をdictで返す。
+
         Args:
             local_path (str): プロジェクトのルートディレクトリ
+
         Returns:
-            dict: 実行結果（status, stdout, stderr）
+            dict:
+                status (str): "success"=正常終了, "error"=エラー発生
+                stdout (str): 標準出力
+                stderr (str): 標準エラー出力
+                returncode (int): プロセスの終了コード
         """
         try:
             result = subprocess.run(
