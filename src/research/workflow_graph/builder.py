@@ -145,7 +145,6 @@ class WorkflowBuilder:
         # 初期状態の設定
         initial_state = WorkflowState(
             model_name=model_name,
-            agent_is=agent_is,
             repo_url=repo_url,
             run_github_parser=run_github_parser,
             run_workflow_generator=run_workflow_generator,
