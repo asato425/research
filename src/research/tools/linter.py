@@ -55,13 +55,18 @@ class LinterTool:
             # actionlintがコマンドとして失敗した場合
             if proc.returncode != 0 and not output:
                 status = "linter_error"
+                error_message = "Linterの実行に失敗しました。"
             else:
                 status = "success" if not parsed else "fail"
+                if status == "success":
+                    error_message = "Lintエラーは検出されませんでした。"
+                else:
+                    error_message = "Lintエラーが検出されました。"
             result = LintResult(
                 local_path=local_path,
                 raw_output=parsed,
                 status=status,
-                error_message=None if status != "linter_error" else proc.stderr.strip()
+                error_message=error_message
             )
             log(result.status, f"actionlint: {result.error_message}")
             return result
