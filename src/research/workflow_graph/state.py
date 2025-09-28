@@ -84,6 +84,7 @@ class WorkflowState(BaseModel):
     # 細かい処理の実行制御フラグ
     run_actionlint: bool = Field(True, description="actionlintを実行するか")
     run_ghalint: bool = Field(True, description="ghalintを実行するか")
+    run_pinact: bool = Field(True, description="pinactを実行するか")
     generate_workflow_required_files: bool = Field(True, description="workflow_required_filesを生成するか")
     generate_best_practices: bool = Field(True, description="best_practicesを生成するか")
     
@@ -120,11 +121,8 @@ class WorkflowState(BaseModel):
     )
 
     # workflow_linterで設定されるフィールド
-    actionlint_results: Annotated[list[LintResult], operator.add] = Field(
-        default_factory=list, description="actionlint結果のリスト"
-    )
-    ghalint_results: Annotated[list[LintResult], operator.add] = Field(
-        default_factory=list, description="ghalint結果のリスト"
+    lint_results: Annotated[list[LintResult], operator.add] = Field(
+        default_factory=list, description="Lint結果のリスト"
     )
 
     # workflow_executorで設定されるフィールド
@@ -174,13 +172,9 @@ class WorkflowState(BaseModel):
             result += f"{BLUE}生成されたワークフロー:{RESET}\n"
             for workflow in self.generate_workflows:
                 result += workflow.summary() + "\n\n"
-        if self.actionlint_results:
-            result += f"{BLUE}actionlint結果:{RESET}\n"
-            for lint in self.actionlint_results:
-                result += lint.summary() + "\n\n"
-        if self.ghalint_results:
-            result += f"{BLUE}ghalint結果:{RESET}\n"
-            for lint in self.ghalint_results:
+        if self.lint_results:
+            result += f"{BLUE}Lint結果:{RESET}\n"
+            for lint in self.lint_results:
                 result += lint.summary() + "\n\n"
         if self.workflow_run_results:
             result += f"{BLUE}ワークフロー実行結果:{RESET}\n"
