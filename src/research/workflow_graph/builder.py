@@ -5,22 +5,21 @@ from research.workflow_graph.nodes.workflow_generator import WorkflowGenerator
 from research.workflow_graph.nodes.workflow_linter import WorkflowLinter
 from research.workflow_graph.nodes.workflow_executor import WorkflowExecutor
 from research.workflow_graph.nodes.explanation_generator import ExplanationGenerator
+from research.log_output.log import log
 
 class WorkflowBuilder:
     def __init__(self, 
         model_name:str = "gemini",
-        agent_is:bool = False,
         ):
         self.model_name = model_name
-        self.agent_is = agent_is
         
         # 各種ジェネレータの初期化
         self.github_repo_parser = GitHubRepoParser(model_name=self.model_name)
-        self.workflow_generator = WorkflowGenerator(model_name=self.model_name, agent_is=self.agent_is)
+        self.workflow_generator = WorkflowGenerator(model_name=self.model_name)
         self.workflow_linter = WorkflowLinter(model_name=self.model_name)
         self.workflow_executor = WorkflowExecutor()
-        self.explanation_generator = ExplanationGenerator(model_name=self.model_name, agent_is=self.agent_is)
-        
+        self.explanation_generator = ExplanationGenerator(model_name=self.model_name)
+
         # グラフの作成
         self.graph = self._build()
 
@@ -71,6 +70,9 @@ class WorkflowBuilder:
         if state.lint_results[-1].status == "success":
             return True
         
+        if state.lint_results[-1].status == "linter_error":
+            log("error", "Linter自体の実行に失敗しており、ワークフローの修正はできないため進みます")
+            return True
         # ループ回数が上限に達しているならTrue
         if state.loop_count >= state.lint_loop_count_max:
             return True
@@ -109,7 +111,7 @@ class WorkflowBuilder:
             run_pinact: bool,
             generate_workflow_required_files: bool,
             generate_best_practices: bool,
-            model_name: str = "gemini", agent_is: bool = False,
+            model_name: str = "gemini",
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
             lint_loop_count_max: int = 3, best_practice_num: int = 10) -> WorkflowState:
