@@ -23,8 +23,6 @@ class LLMTool:
             モデルインスタンス (ChatGoogleGenerativeAI, ChatOpenAI, ChatAnthropic など)
         """
         models = {
-            "gemini-1.5-flash": lambda: ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=temperature).with_structured_output(output_model) if output_model else ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=temperature),
-            "gemini-1.5-pro": lambda: ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=temperature).with_structured_output(output_model) if output_model else ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=temperature),
             "gemini-2.5-flash": lambda: ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=temperature).with_structured_output(output_model) if output_model else ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=temperature),
             "gemini-2.5-pro": lambda: ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=temperature).with_structured_output(output_model) if output_model else ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=temperature),
             "gpt-4": lambda: ChatOpenAI(model="gpt-4o-mini", temperature=temperature).with_structured_output(output_model) if output_model else ChatOpenAI(model="gpt-4o-mini", temperature=temperature),
