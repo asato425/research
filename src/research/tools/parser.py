@@ -98,7 +98,7 @@ class ParserTool:
         elif status == "linter_error":
             parse_details = f"Linter自体の実行に失敗しました。エラーメッセージ: {error_message or ''}"
         elif status == "success":
-            parse_details = "Lint結果: 問題は検出されませんでした。"
+            parse_details = "問題は検出されませんでした。"
         else:
             # failの場合
             llm_prompt = ChatPromptTemplate.from_messages(
@@ -125,7 +125,7 @@ class ParserTool:
                 "error_message": error_message,
                 "raw_output": raw_output
             })
-            log("info", f"Lintパーサー結果: {result.error_details}")
+            log("info", f"Lintパーサー結果: {result.parse_details}")
             return result
 
         log("info", f"Lintパーサー結果: {parse_details or 'No parse details'}")
