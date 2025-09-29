@@ -60,9 +60,7 @@ class ParserTool:
                 ]
             )
             chain = prompt | self.llm
-
-            log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details}")
-            return chain.invoke(
+            result = chain.invoke(
                 {
                     "status": status,
                     "conclusion": conclusion,
@@ -70,9 +68,10 @@ class ParserTool:
                     "failure_reason": failure_reason,
                 }
             )
-
+            log(conclusion, f"ワークフロー実行ログパーサー結果: {result.parse_details}")
+            return result
+        
         log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details or 'No parse details'}")
-
         return ParseResult(
             parse_details=parse_details
         )
