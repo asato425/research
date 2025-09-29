@@ -67,7 +67,7 @@ class LintResult(BaseModel):
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
 
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
+        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略"
 
     def __repr__(self):
         return f"LintResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}}}"
@@ -169,6 +169,10 @@ class WorkflowState(BaseModel):
     # explanation_generatorで設定されるフィールド
     generate_explanation: Optional[str] = Field(None, description="生成されたGitHubActionsワークフローの解説文")
 
+    def save_messages_to_file(self, filepath: str):
+        with open(filepath, "w", encoding="utf-8") as f:
+            for msg in self.messages:
+                f.write(f"{msg.type}: {msg.content}\n")
     def __str__(self):
         return self.summary()
 
@@ -223,4 +227,6 @@ class WorkflowState(BaseModel):
             result += f"{BLUE}ワークフロー実行結果:{RESET}\n"
             for run in self.workflow_run_results:
                 result += run.summary() + "\n\n"
+        if self.messages:
+            self.save_messages_to_file("messages.txt")
         return result
