@@ -20,7 +20,7 @@ GENERATE_BEST_PRACTICES = True
 """
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
 """
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-pro"
 
 # コマンドライン引数のデフォルト値
 WORK_REF = "work_"+MODEL_NAME  # 作業用ブランチ名
