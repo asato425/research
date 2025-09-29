@@ -92,8 +92,17 @@ class WorkflowBuilder:
         if state.workflow_run_results[-1].status == "success":
             return True 
         
+        if state.workflow_run_results[-1].failure_category.category == "project_error":
+            log("warning", "ワークフローの実行は失敗したが、プロジェクト側の問題なのでワークフローの修正はできないため進みます")
+            return True
+
+        if state.workflow_run_results[-1].failure_category.category == "unknown_error":
+            log("warning", "ワークフローの実行は失敗したが、原因が特定できず、ワークフローの修正はできないため進みます")
+            return True
+        
         # ループ回数が上限に達しているならTrue
         if state.loop_count >= state.loop_count_max:
+            log("warning", "ループ回数が上限に達したため、ワークフローの修正は行いません")
             return True
 
         # それ以外はFalse
