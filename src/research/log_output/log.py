@@ -42,6 +42,7 @@ def log(status: str, message: str) -> None:
     # status→levelname変換
     level_map = {
         "success": "SUCCESS",
+        "completed": "SUCCESS",
         "info": "INFO",
         "warning": "WARNING",
         "error": "ERROR",
