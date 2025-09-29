@@ -1,6 +1,7 @@
 # workflow_generator.py
 """
 このモジュールはワークフローの生成を担当します。
+Lintや実行結果に基づく修正はそれまでの全てのエラー内容を引き継いで行った方がいいかも？
 """
 from research.workflow_graph.state import GenerateWorkflow, WorkflowState
 from research.log_output.log import log
@@ -124,7 +125,6 @@ class WorkflowGenerator:
         llm = LLMTool()
         github = GitHubTool()
 
-        # 推奨されない書き方ですが、一旦stateにbest_practicesを追加
         if state.generate_best_practices:
             log("info", "ベストプラクティスの取得を開始します")
             best_practices = get_yml_best_practices(state)
