@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 import operator
 from typing import Annotated, Optional
 from typing import Any
+from langchain_core.messages import BaseMessage
 
 
 """
@@ -107,6 +108,9 @@ class WorkflowState(BaseModel):
     必要に応じて属性を追加・修正してください。
     """
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
+    
+    messages: Annotated[list[BaseMessage], operator.add] = Field(
+        default_factory=list, description="LLMとの対話履歴メッセージのリスト")
     # ノードの実行制御フラグ
     run_github_parser: bool = Field(False, description="github_repo_parserノードを実行するか")
     run_workflow_generator: bool = Field(False, description="workflow_generatorノードを実行するか")
@@ -148,7 +152,6 @@ class WorkflowState(BaseModel):
     )
 
     # workflow_generatorで設定されるフィールド
-    best_practices: Optional[str] = Field(None, description="言語固有のベストプラクティス")
     generate_workflows: Annotated[list[GenerateWorkflow], operator.add] = Field(
         default_factory=list, description="生成ワークフローのリスト"
     )
