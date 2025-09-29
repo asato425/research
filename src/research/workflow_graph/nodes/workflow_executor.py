@@ -1,8 +1,10 @@
 # executor.py
 from research.tools.github import GitHubTool
+from research.tools.llm import LLMTool
 from research.tools.parser import ParserTool
-from research.workflow_graph.state import WorkflowState, WorkflowRunResult
+from research.workflow_graph.state import WorkflowState, WorkflowRunResult, WorkflowRunResultCategory
 from research.log_output.log import log
+from langchain_core.prompts import ChatPromptTemplate
 import sys
 from typing import Any
 from datetime import datetime
@@ -65,10 +67,43 @@ class WorkflowExecutor:
             
             parser_result = parser.workflow_log_parse(get_workflow_log_result)
         
+            category_result = None
+            if get_workflow_log_result.conclusion != "success":
+                llm = LLMTool()
+            
+                model = llm.create_model(
+                    model_name=self.model_name,
+                    output_model=WorkflowRunResultCategory
+                )
+            
+                input = {
+                    "workflow_content": state.generate_workflows[-1].generated_text,
+                    "parse_details": parser_result.parse_details,
+                }
+                
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
+                    ("human",
+                        "以下のGitHub Actionsのワークフロー内容と実行ログの要約をもとに、"
+                        "ワークフローの失敗原因を次の3つのいずれかに分類してください。\n"
+                        "- 'yml_error': YAMLファイルの記述ミスや構文エラーなど、ワークフロー定義自体の問題(YAMLファイルの内容を修正すれば解決可能な場合)\n"
+                        "- 'project_error': YAML自体は正しいが、テストやビルドなどプロジェクト本体の処理が失敗した場合(YAMLファイルの内容を修正しても解決できない場合)\n"
+                        "- 'unknown_error': 上記以外や判別不能な場合\n"
+                        "分類は必ず1つだけ選び、分類理由や根拠も日本語で簡潔に説明してください。\n"
+                        "【ワークフローの内容】\n"
+                        "{workflow_content}\n"
+                        "【実行ログの要約】\n"
+                        "{parse_details}\n"
+                    )
+                ])
+                chain = prompt | model
+                category_result = chain.invoke(input)
+
             result = WorkflowRunResult(
                 status=get_workflow_log_result.conclusion,
                 raw_error=get_workflow_log_result.failure_reason,
                 parsed_error=parser_result.parse_details,
+                failure_category=category_result
             )
         else:
             log("info", "Workflow Executorはスキップされました")
@@ -76,6 +111,7 @@ class WorkflowExecutor:
                 status="success",
                 raw_error=None,
                 parsed_error=None,
+                failure_category=None
             )
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
