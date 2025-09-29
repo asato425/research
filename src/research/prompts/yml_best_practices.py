@@ -34,7 +34,7 @@ def get_yml_best_practices(state: WorkflowState) -> str:
     Return
         GitHub Actionsのymlベストプラクティス
     '''
-    enable_reuse = False
+    enable_reuse = True
     if not enable_reuse or state.language.lower() not in ["python", "javascript","java"]:
         log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がbest_practices/にない、または再利用が無効なためLLMに生成させます。")
         llm = LLMTool().create_model(model_name=state.model_name)
