@@ -13,6 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
 import sys
 import time
+from langchain_core.messages import HumanMessage, AIMessage
 # ワークフロー生成のためのプロンプトを取得
 def get_generate_workflow_prompt():
     return (
@@ -21,6 +22,8 @@ def get_generate_workflow_prompt():
         "- プロジェクトのローカルパス: {local_path}"
         "- ファイル構造（ツリー形式）:"
         "{file_tree}"
+        "- 主要ファイル:"
+        "{main_files}"
         "- リポジトリの情報:"
         "{repo_info}"
         "【YAML記述ルール】"
@@ -32,24 +35,16 @@ def get_generate_workflow_prompt():
 def get_modify_after_lint_prompt():
     return (
         "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
-        "- GitHub Actionsワークフロー（YAML）の内容:"
-        "{workflow_content}"
         "- Lintエラーの内容:"
         "{lint_errors}"
     )
 def get_modify_after_execute_prompt():
     return (
         "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
-        "- GitHub Actionsワークフロー（YAML）の内容:"
-        "{workflow_content}"
         "- 実行エラーの内容:"
         "{exec_errors}"
     )
-def get_base_prompt(human_prompt: str):
-    return [
-        ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
-        ("human", human_prompt)
-    ]
+
 class WorkflowGenerator:
     """
     ワークフローの生成・修正を担当するクラス。
@@ -66,15 +61,13 @@ class WorkflowGenerator:
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
-                result, best_practices =  self._generate_workflow(state)
+                result, human_prompt =  self._generate_workflow(state)
             elif "workflow_linter" == state.prev_node:
-                result = self._modify_after_lint(state)
-                best_practices = state.best_practices
+                result, human_prompt = self._modify_after_lint(state)
             elif "workflow_executor" == state.prev_node:
-                result = self._modify_after_execute(state)
-                best_practices = state.best_practices
+                result, human_prompt = self._modify_after_execute(state)
             else:
-                raise ValueError("不正な入力です")
+                raise ValueError("不正な入力です")    
         else:
             log("info", "Workflow Generatorはスキップされました")
             result = GenerateWorkflow(
@@ -82,7 +75,7 @@ class WorkflowGenerator:
                 generated_text="",
                 tokens_used=0
             )
-            best_practices = state.best_practices
+            human_prompt = HumanMessage(content="Workflow Generatorはスキップされました")
 
         github = GitHubTool()
         # ymlファイルの内容生成後、ブランチの作成、ファイルの作成、書き込みを行う
@@ -110,8 +103,8 @@ class WorkflowGenerator:
         log("info", f"WorkflowGenerator実行時間: {elapsed:.2f}秒")
         
         return {
+            "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
             "generate_workflows": [result],
-            "best_practices": best_practices,
             "prev_node": "workflow_generator",
             "node_history": ["workflow_generator"],
             "loop_count": state.loop_count+1
@@ -134,6 +127,7 @@ class WorkflowGenerator:
         input = {
                 "local_path": state.local_path,
                 "file_tree": state.file_tree,
+                "main_files": "\n".join([file.summary() for file in state.workflow_required_files]),
                 "repo_info": state.repo_info,
                 "language": state.language,
                 "yml_rules": get_yml_rules(),
@@ -144,7 +138,8 @@ class WorkflowGenerator:
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
-        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_generate_workflow_prompt()))
+        human_prompt = HumanMessage(content=get_generate_workflow_prompt())
+        prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke(input)
 
@@ -161,7 +156,7 @@ class WorkflowGenerator:
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
             sys.exit()
 
-        return result, best_practices
+        return result, human_prompt
 
     def _modify_after_lint(self, state: WorkflowState) -> GenerateWorkflow:
         """
@@ -189,8 +184,8 @@ class WorkflowGenerator:
             "workflow_content": state.generate_workflows[-1].generated_text,
             "lint_errors": state.lint_results[-1].parsed_error
         }
-        
-        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_modify_after_lint_prompt()))
+        human_prompt = HumanMessage(content=get_modify_after_lint_prompt())
+        prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke(input)
 
@@ -198,7 +193,7 @@ class WorkflowGenerator:
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             sys.exit()
         log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
-        return result
+        return result, human_prompt
 
     def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
         """
@@ -226,8 +221,8 @@ class WorkflowGenerator:
             "workflow_content": state.generate_workflows[-1].generated_text,
             "exec_errors": exec_result.parsed_error
         }
-
-        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_modify_after_execute_prompt()))
+        human_prompt = HumanMessage(content=get_modify_after_execute_prompt())
+        prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke(input)
 
@@ -235,5 +230,5 @@ class WorkflowGenerator:
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             sys.exit()
         log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
-        return result
+        return result, human_prompt
 
