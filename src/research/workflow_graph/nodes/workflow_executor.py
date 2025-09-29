@@ -47,7 +47,7 @@ class WorkflowExecutor:
                 workflow_execute_result = github.dispatch_workflow(
                     repo_url=state.repo_url,
                     ref=state.work_ref,
-                    workflow_id=state.generate_workflows[-1].file_name
+                    workflow_id=state.yml_file_name
                 )
             else:
                 log("error", "生成されたワークフローが存在しないためプログラムを終了します")
@@ -55,14 +55,16 @@ class WorkflowExecutor:
 
             if workflow_execute_result.status != "success":
                 log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
+                log("error", f"詳細: {workflow_execute_result}")
                 sys.exit()
             
             get_workflow_log_result = github.get_latest_workflow_logs(
                 repo_url=state.repo_url,
                 commit_sha=commit_sha
             )
-            if get_workflow_log_result.status != "success":
+            if get_workflow_log_result.status != "completed":
                 log("error", "ワークフローのログの取得に失敗したのでプログラムを終了します")
+                log("error", f"詳細: {get_workflow_log_result}")
                 sys.exit()
             
             parser_result = parser.workflow_log_parse(get_workflow_log_result)
@@ -72,7 +74,7 @@ class WorkflowExecutor:
                 llm = LLMTool()
             
                 model = llm.create_model(
-                    model_name=self.model_name,
+                    model_name=state.model_name,
                     output_model=WorkflowRunResultCategory
                 )
             
@@ -98,7 +100,7 @@ class WorkflowExecutor:
                 ])
                 chain = prompt | model
                 category_result = chain.invoke(input)
-
+                log("info", f"LLM {state.model_name}を利用し、ワークフロー実行失敗の原因を{category_result.category}として分類しました。その理由: {category_result.reason}")
             result = WorkflowRunResult(
                 status=get_workflow_log_result.conclusion,
                 raw_error=get_workflow_log_result.failure_reason,
