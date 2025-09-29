@@ -34,13 +34,13 @@ def get_generate_workflow_prompt():
 
 def get_modify_after_lint_prompt():
     return (
-        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
+        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのエラー内容や修正履歴も踏まえてください。"
         "- Lintエラーの内容:"
         "{lint_errors}"
     )
 def get_modify_after_execute_prompt():
     return (
-        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
+        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのエラー内容や修正履歴も踏まえてください。"
         "- 実行エラーの内容:"
         "{exec_errors}"
     )
