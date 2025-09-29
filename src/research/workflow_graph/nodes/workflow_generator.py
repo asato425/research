@@ -36,6 +36,14 @@ def get_modify_after_lint_prompt():
         "- Lintエラーの内容:"
         "{lint_errors}"
     )
+def get_modify_after_execute_prompt():
+    return (
+        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
+        "- GitHub Actionsワークフロー（YAML）の内容:"
+        "{workflow_content}"
+        "- 実行エラーの内容:"
+        "{exec_errors}"
+    )
 def get_base_prompt(human_prompt: str):
     return [
         ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
@@ -198,10 +206,34 @@ class WorkflowGenerator:
         exec_resultにはファイルの内容と実行結果を含む
         """
         # exec_resultをもとにworkflowを修正する処理
-        result = GenerateWorkflow(
-            status="success",
-            generated_text="",
-            tokens_used=1
+        exec_result = state.workflow_run_results[-1]
+        if exec_result.status == "success":
+            log("info", "workflow_run_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
+            sys.exit()
+        
+        if exec_result.failure_category.category in ["project_error", "unknown_error"]:
+            log("error", "workflow_run_result.statusがproject_errorまたはunknown_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
+            sys.exit()
+
+        llm = LLMTool()
+        
+        model = llm.create_model(
+            model_name=self.model_name, 
+            output_model=GenerateWorkflow
         )
+    
+        input = {
+            "workflow_content": state.generate_workflows[-1].generated_text,
+            "exec_errors": exec_result.parsed_error
+        }
+
+        prompt = ChatPromptTemplate.from_messages(get_base_prompt(get_modify_after_execute_prompt()))
+        chain = prompt | model
+        result = chain.invoke(input)
+
+        if result.status != "success":
+            log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
+            sys.exit()
+        log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
         return result
 
