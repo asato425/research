@@ -6,6 +6,7 @@ from research.workflow_graph.nodes.workflow_linter import WorkflowLinter
 from research.workflow_graph.nodes.workflow_executor import WorkflowExecutor
 from research.workflow_graph.nodes.explanation_generator import ExplanationGenerator
 from research.log_output.log import log
+from langchain_core.messages import SystemMessage
 
 class WorkflowBuilder:
     def __init__(self, 
@@ -156,6 +157,7 @@ class WorkflowBuilder:
         # 初期状態の設定
         initial_state = WorkflowState(
             model_name=model_name,
+            messages=[SystemMessage(content="あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。")],
             repo_url=repo_url,
             run_github_parser=run_github_parser,
             run_workflow_generator=run_workflow_generator,
