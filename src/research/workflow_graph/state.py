@@ -23,6 +23,13 @@ class RequiredFile(BaseModel):
             f"内容: {'あり' if self.content else 'なし'}"
         ]
         return "\n".join(lines)
+    
+    def __str__(self):
+        return self.summary()
+
+    def __repr__(self):
+        return f"RequiredFile={{name={self.name}, description={self.description}, path={self.path}, content={self.content}}}"
+
 
 class WorkflowRequiredFiles(BaseModel):
     workflow_required_files: list[RequiredFile] = Field(
@@ -31,6 +38,9 @@ class WorkflowRequiredFiles(BaseModel):
     )
     def summary(self) -> str:
         return "\n".join(file.summary() for file in self.workflow_required_files)
+
+    def __repr__(self):
+        return f"WorkflowRequiredFiles={{workflow_required_files={self.workflow_required_files}}}"
 
 class GenerateWorkflow(BaseModel):
     """
@@ -42,6 +52,9 @@ class GenerateWorkflow(BaseModel):
 
     def summary(self) -> str:
         return f"ステータス: {self.status}\n生成されたテキスト: 省略\n使用されたトークン数: {self.tokens_used}"
+
+    def __repr__(self):
+        return f"GenerateWorkflow={{status={self.status}, generated_text={self.generated_text}, tokens_used={self.tokens_used}}}"
 
 class LintResult(BaseModel):
     """
@@ -55,6 +68,22 @@ class LintResult(BaseModel):
     def summary(self) -> str:
         return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
 
+    def __repr__(self):
+        return f"LintResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}}}"
+
+class WorkflowRunResultCategory(BaseModel):
+    """
+    ワークフロー実行失敗のカテゴリを表すPydanticモデル。
+    'yml_error' または 'project_error' のいずれかを保持する。
+    """
+    category: Optional[str] = Field(None, description="ワークフロー実行失敗のカテゴリ（'yml_error' または 'project_error' または 'unknown_error'）")
+    reason: Optional[str] = Field(None, description="そのカテゴリに分類した理由や説明")
+    
+    def summary(self) -> str:
+        return f"カテゴリ: {self.category or 'なし'}\n理由: {self.reason or 'なし'}"
+
+    def __repr__(self):
+        return f"WorkflowRunResultCategory={{category={self.category}, reason={self.reason}}}"
 class WorkflowRunResult(BaseModel):
     """
     ワークフローの実行結果を表すPydanticモデル。
@@ -63,9 +92,13 @@ class WorkflowRunResult(BaseModel):
     status: str = Field(..., description="ワークフロー実行結果の状態")
     raw_error: Optional[str] = Field(None, description="ワークフロー実行エラーの原文（ツール出力そのまま）")
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したワークフロー実行エラー")
+    failure_category: WorkflowRunResultCategory | None = Field(None, description="ワークフロー実行失敗のカテゴリとその理由")
     
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略"
+        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略\n{self.failure_category.summary() if self.failure_category else '失敗カテゴリ: なし'}"
+
+    def __repr__(self):
+        return f"WorkflowRunResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}, failure_category={self.failure_category.__repr__()}}}"
 
         
 class WorkflowState(BaseModel):
@@ -137,7 +170,14 @@ class WorkflowState(BaseModel):
         return self.summary()
 
     def __repr__(self):
-        return self.summary()
+        return (
+            f"WorkflowState={{model_name={self.model_name}, run_github_parser={self.run_github_parser}, run_workflow_generator={self.run_workflow_generator}, "
+            f"run_linter={self.run_linter}, run_workflow_executer={self.run_workflow_executer}, run_explanation_generator={self.run_explanation_generator}, "
+            f"repo_url={self.repo_url}, work_ref={self.work_ref}, yml_file_name={self.yml_file_name}, loop_count={self.loop_count}, "
+            f"local_path={self.local_path}, language={self.language}, best_practices={self.best_practices}, "
+            f"generate_workflows={self.generate_workflows}, lint_results={self.lint_results}, workflow_run_results={self.workflow_run_results}, "
+            f"generate_explanation={self.generate_explanation}}}"
+        )
     
     def summary(self) -> str:
         BLUE = "\033[34m"
