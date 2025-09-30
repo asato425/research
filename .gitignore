@@ -65,3 +65,4 @@ coverage.xml
 # python-dotenv
 .env
 .venv
+messages.txt
