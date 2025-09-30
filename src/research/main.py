@@ -23,7 +23,7 @@ MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4"、"gpt-5"、"cla
 MODEL_NAME = "gpt-5"
 
 # コマンドライン引数のデフォルト値
-WORK_REF = "work_"+MODEL_NAME  # 作業用ブランチ名
+WORK_REF = "work/"+MODEL_NAME  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
 MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
