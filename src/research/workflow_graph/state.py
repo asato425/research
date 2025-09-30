@@ -129,8 +129,11 @@ class WorkflowState(BaseModel):
     repo_url: str = Field(..., description="リポジトリのURL")
     work_ref: str = Field(..., description="作業用のブランチの名前")
     yml_file_name: str = Field(..., description="生成されたYAMLファイルの名前")
-
-
+    
+    # 実験で履歴を保存するためのファイル名(本来はstateには不要だが、実験用に追加)
+    message_file_name: str = Field("messages.txt", description="LLMとの対話履歴メッセージを保存するファイルの名前")
+    finish_is: bool = Field(False, description="ワークフローの評価を終了するかどうかのフラグ")
+    
     loop_count: int = Field(0, description="ワークフローのループ回数")
     loop_count_max: int = Field(..., description="ワークフローのループ回数の上限")
     lint_loop_count_max: int = Field(..., description="生成とLintのループ回数の上限")
@@ -190,6 +193,7 @@ class WorkflowState(BaseModel):
         BLUE = "\033[34m"
         RESET = "\033[0m"
         result = (
+            f"{BLUE}リポジトリURL:{RESET} {self.repo_url}\n\n"
             f"{BLUE}ノードの実行状況:{RESET}\n"
             f"{BLUE}GitHubパーサー:{RESET} {'実行' if self.run_github_parser else 'スキップ'}\n"
             f"{BLUE}ワークフロー生成:{RESET} {'実行' if self.run_workflow_generator else 'スキップ'}\n"
@@ -211,5 +215,5 @@ class WorkflowState(BaseModel):
             #f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
         )
         if self.messages:
-            self.save_messages_to_file("messages.txt")
+            self.save_messages_to_file(self.message_file_name)
         return result
