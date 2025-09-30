@@ -21,7 +21,7 @@ class RequiredFile(BaseModel):
             f"ファイル名: {self.name}",
             f"説明: {self.description}",
             f"パス: {self.path}",
-            f"内容: {'あり' if self.content else 'なし'}"
+            f"内容: {self.content if self.content else 'なし'}"
         ]
         return "\n".join(lines)
     
@@ -210,23 +210,6 @@ class WorkflowState(BaseModel):
             f"{BLUE}言語:{RESET} {self.language}\n"
             #f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
         )
-
-        if self.workflow_required_files:
-            result += f"{BLUE}主要ファイル:{RESET}\n"
-            for file in self.workflow_required_files:
-                result += file.summary() + "\n\n"
-        if self.generate_workflows:
-            result += f"{BLUE}生成されたワークフロー:{RESET}\n"
-            for workflow in self.generate_workflows:
-                result += workflow.summary() + "\n\n"
-        if self.lint_results:
-            result += f"{BLUE}Lint結果:{RESET}\n"
-            for lint in self.lint_results:
-                result += lint.summary() + "\n\n"
-        if self.workflow_run_results:
-            result += f"{BLUE}ワークフロー実行結果:{RESET}\n"
-            for run in self.workflow_run_results:
-                result += run.summary() + "\n\n"
         if self.messages:
             self.save_messages_to_file("messages.txt")
         return result
