@@ -6,7 +6,7 @@ import argparse
 RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = True
-RUN_WORKFLOW_EXECUTER = False
+RUN_WORKFLOW_EXECUTER = True
 RUN_EXPLANATION_GENERATOR = True
 
 # 細かい実行制御フラグ
