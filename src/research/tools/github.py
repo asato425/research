@@ -166,7 +166,7 @@ class GitHubTool:
 
         resp = requests.get(f"{self.base_url}/github/info", json={"repo_url": repo_url})
         result = RepoInfoResult(**resp.json())
-        log(result.status, result.message)
+        log(result.status, result.message+str(result.info))
         return result
 
     def clone_repository(self, repo_url: str, local_path: str = None) -> CloneResult:
