@@ -5,7 +5,6 @@ from research.tools.parser import ParserTool
 from research.workflow_graph.state import WorkflowState, WorkflowRunResult, WorkflowRunResultCategory
 from research.log_output.log import log
 from langchain_core.prompts import ChatPromptTemplate
-import sys
 from typing import Any
 from datetime import datetime
 import time
@@ -36,7 +35,7 @@ class WorkflowExecutor:
         )
         if push_result.status != "success":
             log("error", "コミットorプッシュに失敗したのでプログラムを終了します")
-            sys.exit()
+            return {"finish_is": True}
         # コミットSHAの取得
         commit_sha = push_result.commit_sha
 
@@ -51,12 +50,12 @@ class WorkflowExecutor:
                 )
             else:
                 log("error", "生成されたワークフローが存在しないためプログラムを終了します")
-                sys.exit()
+                return {"finish_is": True}
 
             if workflow_execute_result.status != "success":
                 log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
                 log("error", f"詳細: {workflow_execute_result}")
-                sys.exit()
+                return {"finish_is": True}
             
             get_workflow_log_result = github.get_latest_workflow_logs(
                 repo_url=state.repo_url,
@@ -65,7 +64,7 @@ class WorkflowExecutor:
             if get_workflow_log_result.status != "completed":
                 log("error", "ワークフローのログの取得に失敗したのでプログラムを終了します")
                 log("error", f"詳細: {get_workflow_log_result}")
-                sys.exit()
+                return {"finish_is": True}
             
             parser_result = parser.workflow_log_parse(get_workflow_log_result)
         
