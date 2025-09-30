@@ -253,6 +253,7 @@ def get_repository_info(req: RepoInfoRequest):
 
     api_url = f"https://api.github.com/repos/{owner}/{repo}"
     topics_url = f"https://api.github.com/repos/{owner}/{repo}/topics"
+    languages_url = f"https://api.github.com/repos/{owner}/{repo}/languages"
 
     # 1. デフォルトブランチのSHA取得
     try:
@@ -274,6 +275,12 @@ def get_repository_info(req: RepoInfoRequest):
         topics = topics_resp.json().get("names", []) if topics_resp.status_code == 200 else []
     except Exception:
         topics = []
+    # 3. languages
+    try:
+        languages_resp = requests.get(languages_url, headers=headers)
+        language = list(languages_resp.json().keys())[0].lower() if languages_resp.status_code == 200 else []
+    except Exception as e:
+        return RepoInfoResponse(status="error", info=None, message=f"languageの取得ができませんでした。エラー: {str(e)}")
 
     info = {
         "full_name": data.get("full_name"),
@@ -286,7 +293,7 @@ def get_repository_info(req: RepoInfoRequest):
         "created_at": data.get("created_at"),
         "updated_at": data.get("updated_at"),
         "pushed_at": data.get("pushed_at"),
-        "language": data.get("language"),
+        "language": language,
         "archived": data.get("archived"),
         "disabled": data.get("disabled"),
         "topics": topics,
