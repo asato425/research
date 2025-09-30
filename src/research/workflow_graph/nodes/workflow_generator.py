@@ -14,36 +14,6 @@ from typing import Any
 import sys
 import time
 from langchain_core.messages import HumanMessage, AIMessage
-# ワークフロー生成のためのプロンプトを取得
-def get_generate_workflow_prompt():
-    return (
-        "以下の条件・情報をもとに、{language}プロジェクト向けのGitHub Actionsワークフロー（YAML）を生成してください。"
-        "【プロジェクト情報】"
-        "- プロジェクトのローカルパス: {local_path}"
-        "- ファイル構造（ツリー形式）:"
-        "{file_tree}"
-        "- 主要ファイル:"
-        "{main_files}"
-        "- リポジトリの情報:"
-        "{repo_info}"
-        "【YAML記述ルール】"
-        "{yml_rules}"
-        "【{language}向けベストプラクティス】"
-        "{yml_best_practices}"
-    )
-
-def get_modify_after_lint_prompt():
-    return (
-        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのエラー内容や修正履歴も踏まえてください。"
-        "- Lintエラーの内容:"
-        "{lint_errors}"
-    )
-def get_modify_after_execute_prompt():
-    return (
-        "以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのエラー内容や修正履歴も踏まえてください。"
-        "- 実行エラーの内容:"
-        "{exec_errors}"
-    )
 
 class WorkflowGenerator:
     """
@@ -124,24 +94,29 @@ class WorkflowGenerator:
         else:
             log("info", "ベストプラクティスの取得はスキップされました")
             best_practices = ""
-        input = {
-                "local_path": state.local_path,
-                "file_tree": state.file_tree,
-                "main_files": "\n".join([file.summary() for file in state.workflow_required_files]),
-                "repo_info": state.repo_info,
-                "language": state.language,
-                "yml_rules": get_yml_rules(),
-                "yml_best_practices": best_practices
-            }
         
         model = llm.create_model(
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
-        human_prompt = HumanMessage(content=get_generate_workflow_prompt())
+        human_prompt = HumanMessage(
+            content=f"以下の条件・情報をもとに、{state.language}プロジェクト向けのGitHub Actionsワークフロー（YAML）を生成してください。\n"
+                    "【プロジェクト情報】\n"
+                    f"- プロジェクトのローカルパス: {state.local_path}\n"
+                    "- ファイル構造（ツリー形式）:\n"
+                    f"{state.file_tree}\n"
+                    "- 主要ファイル:\n"
+                    f"{"\n".join([file.summary() for file in state.workflow_required_files])}\n"
+                    "- リポジトリの情報:\n"
+                    f"{state.repo_info}\n"
+                    "【YAML記述ルール】\n"
+                    f"{get_yml_rules()}\n"
+                    f"【{state.language}向けベストプラクティス】\n"
+                    f"{best_practices}"
+        )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
-        result = chain.invoke(input)
+        result = chain.invoke({})
 
         if result.status != "success":
             log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
@@ -180,17 +155,18 @@ class WorkflowGenerator:
             output_model=GenerateWorkflow
         )
         
-        input = {
-            "workflow_content": state.generate_workflows[-1].generated_text,
-            "lint_errors": state.lint_results[-1].parsed_error
-        }
-        human_prompt = HumanMessage(content=get_modify_after_lint_prompt())
+        human_prompt = HumanMessage(
+            content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのワークフロー生成、エラーの内容の履歴も踏まえてください。\n"
+                    "- Lintエラーの内容:\n"
+                    f"{lint_result.parsed_error}\n"
+        )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
-        result = chain.invoke(input)
+        result = chain.invoke({})
 
         if result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
+            state.save_messages_to_file("messages.txt")
             sys.exit()
         log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
         return result, human_prompt
@@ -216,15 +192,15 @@ class WorkflowGenerator:
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
-    
-        input = {
-            "workflow_content": state.generate_workflows[-1].generated_text,
-            "exec_errors": exec_result.parsed_error
-        }
-        human_prompt = HumanMessage(content=get_modify_after_execute_prompt())
+
+        human_prompt = HumanMessage(
+            content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのワークフロー生成、エラーの内容の履歴も踏まえてください。\n"
+                    "- 実行エラーの内容:\n"
+                    f"{exec_result.parsed_error}\n"
+        )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
-        result = chain.invoke(input)
+        result = chain.invoke({})
 
         if result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
