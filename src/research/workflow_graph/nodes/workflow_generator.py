@@ -11,7 +11,6 @@ from research.prompts.yml_rule import get_yml_rules
 from research.prompts.yml_best_practices import get_yml_best_practices
 from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
-import sys
 import time
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -27,15 +26,15 @@ class WorkflowGenerator:
         
         # 開始時間の記録
         start_time = time.time()
-        
+
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
-                result, human_prompt =  self._generate_workflow(state)
+                result, human_prompt, finish_is =  self._generate_workflow(state)
             elif "workflow_linter" == state.prev_node:
-                result, human_prompt = self._modify_after_lint(state)
+                result, human_prompt, finish_is = self._modify_after_lint(state)
             elif "workflow_executor" == state.prev_node:
-                result, human_prompt = self._modify_after_execute(state)
+                result, human_prompt, finish_is = self._modify_after_execute(state)
             else:
                 raise ValueError("不正な入力です")    
         else:
@@ -47,6 +46,10 @@ class WorkflowGenerator:
             )
             human_prompt = HumanMessage(content="Workflow Generatorはスキップされました")
 
+        if finish_is:
+            log("info", "Workflow Generatorでfinish_isがTrueになったのでプログラムを終了します")
+            return {"finish_is": True}
+        
         github = GitHubTool()
         # ymlファイルの内容生成後、ブランチの作成、ファイルの作成、書き込みを行う
         
@@ -57,7 +60,7 @@ class WorkflowGenerator:
         )
         if create_file_result.status != "success":
             log("error", "YAMLファイルの作成に失敗したのでプログラムを終了します")
-            sys.exit()
+            return {"finish_is": True}
         
         write_to_file_result = github.write_to_file(
             local_path=state.local_path,
@@ -66,7 +69,7 @@ class WorkflowGenerator:
         )
         if write_to_file_result.status != "success":
             log("error", "YAMLファイルへの書き込みに失敗したのでプログラムを終了します")
-            sys.exit()
+            return {"finish_is": True}
 
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
@@ -87,6 +90,7 @@ class WorkflowGenerator:
         # repo_infoをもとにワークフロー情報を生成する処理
         llm = LLMTool()
         github = GitHubTool()
+        finish_is = False
 
         if state.generate_best_practices:
             log("info", "ベストプラクティスの取得を開始します")
@@ -120,7 +124,7 @@ class WorkflowGenerator:
 
         if result.status != "success":
             log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
-            sys.exit()
+            finish_is = True
         log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
 
         create_branch_result = github.create_working_branch(
@@ -129,24 +133,25 @@ class WorkflowGenerator:
         )
         if create_branch_result.status != "success":
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
-            sys.exit()
+            finish_is = True
 
-        return result, human_prompt
+        return result, human_prompt, finish_is
 
     def _modify_after_lint(self, state: WorkflowState) -> GenerateWorkflow:
         """
         linter後の指摘をもとにワークフロー情報を修正
         lint_resultにはファイルの内容とlint結果を含む
         """
+        finish_is = False
         # lint_resultをもとにworkflowを修正する処理
         lint_result = state.lint_results[-1]
         if lint_result.status == "success":
             log("info", "lint_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
-            sys.exit()
+            finish_is = True
         
         if lint_result.status == "linter_error":
             log("error", "lint_result.statusがlinter_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
-            sys.exit()
+            finish_is = True
 
         llm = LLMTool()
         
@@ -166,25 +171,25 @@ class WorkflowGenerator:
 
         if result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
-            state.save_messages_to_file("messages.txt")
-            sys.exit()
+            finish_is = True
         log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
-        return result, human_prompt
+        return result, human_prompt, finish_is
 
     def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
         """
         executor後の実行結果をもとにワークフロー情報を修正
         exec_resultにはファイルの内容と実行結果を含む
         """
+        finish_is = False
         # exec_resultをもとにworkflowを修正する処理
         exec_result = state.workflow_run_results[-1]
         if exec_result.status == "success":
             log("info", "workflow_run_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
-            sys.exit()
+            finish_is = True
         
         if exec_result.failure_category.category in ["project_error", "unknown_error"]:
             log("error", "workflow_run_result.statusがproject_errorまたはunknown_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
-            sys.exit()
+            finish_is = True
 
         llm = LLMTool()
         
@@ -204,7 +209,7 @@ class WorkflowGenerator:
 
         if result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
-            sys.exit()
+            finish_is = True
         log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
-        return result, human_prompt
+        return result, human_prompt, finish_is
 
