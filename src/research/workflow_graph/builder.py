@@ -65,17 +65,20 @@ class WorkflowBuilder:
         """
         # Lint結果が空=Lint実行をスキップしているならTrue
         if len(state.lint_results) == 0:
+            log("info", "グラフの分岐：Lint実行をスキップしています")
             return True
         
         # 最新のLint結果がsuccessならTrue
         if state.lint_results[-1].status == "success":
+            log("info", "グラフの分岐：Lintは成功したのでワークフローの修正は不要です")
             return True
         
         if state.lint_results[-1].status == "linter_error":
-            log("error", "Linter自体の実行に失敗しており、ワークフローの修正はできないため進みます")
+            log("warning", "グラフの分岐：Linter自体の実行に失敗しており、ワークフローの修正はできないため進みます")
             return True
         # ループ回数が上限に達しているならTrue
         if state.loop_count >= state.lint_loop_count_max:
+            log("warning", "グラフの分岐：ループ回数が上限に達したため、ワークフローの修正は行いません")
             return True
 
         # それ以外はFalse
@@ -91,19 +94,20 @@ class WorkflowBuilder:
 
         # 最新のワークフロー実行結果がsuccessならTrue
         if state.workflow_run_results[-1].status == "success":
+            log("info", "グラフの分岐：ワークフローは成功したので修正は不要です")
             return True 
         
         if state.workflow_run_results[-1].failure_category.category == "project_error":
-            log("warning", "ワークフローの実行は失敗したが、プロジェクト側の問題なのでワークフローの修正はできないため進みます")
+            log("warning", "グラフの分岐：ワークフローの実行は失敗したが、プロジェクト側の問題なのでワークフローの修正はできないため進みます")
             return True
 
         if state.workflow_run_results[-1].failure_category.category == "unknown_error":
-            log("warning", "ワークフローの実行は失敗したが、原因が特定できず、ワークフローの修正はできないため進みます")
+            log("warning", "グラフの分岐：ワークフローの実行は失敗したが、原因が特定できず、ワークフローの修正はできないため進みます")
             return True
         
         # ループ回数が上限に達しているならTrue
         if state.loop_count >= state.loop_count_max:
-            log("warning", "ループ回数が上限に達したため、ワークフローの修正は行いません")
+            log("warning", "グラフの分岐：ループ回数が上限に達したため、ワークフローの修正は行いません")
             return True
 
         # それ以外はFalse
