@@ -14,13 +14,15 @@ class WorkflowBuilder:
         ):
         self.model_name = model_name
         
+        def pass_func(state: WorkflowState):
+            pass
         # 各種ジェネレータの初期化
         self.github_repo_parser = GitHubRepoParser(model_name=self.model_name)
         self.workflow_generator = WorkflowGenerator(model_name=self.model_name)
         self.workflow_linter = WorkflowLinter(model_name=self.model_name)
         self.workflow_executor = WorkflowExecutor()
         self.explanation_generator = ExplanationGenerator(model_name=self.model_name)
-
+        self.pass_func = pass_func
         # グラフの作成
         self.graph = self._build()
 
@@ -31,12 +33,12 @@ class WorkflowBuilder:
         workflow.add_node("github_repo_parser", self.github_repo_parser)
         workflow.add_node("workflow_generator", self.workflow_generator)
         workflow.add_node("workflow_linter", self.workflow_linter)
-        workflow.add_node("workflow_lint_success_check", lambda state: state)  # 仮の中間ノード
+        workflow.add_node("workflow_lint_success_check", self.pass_func)  # 仮の中間ノード
         workflow.add_node("workflow_executor", self.workflow_executor)
-        workflow.add_node("workflow_execute_success_check", lambda state: state)  # 仮の中間ノード
+        workflow.add_node("workflow_execute_success_check", self.pass_func)  # 仮の中間ノード
         workflow.add_node("explanation_generator", self.explanation_generator)
-        workflow.add_node("END", lambda state: state)  # 終了ノード
-        
+        workflow.add_node("END", self.pass_func)  # 終了ノード
+
         # エントリーポイントの設定
         workflow.set_entry_point("github_repo_parser")
         
@@ -151,6 +153,7 @@ class WorkflowBuilder:
             run_pinact: bool,
             generate_workflow_required_files: bool,
             generate_best_practices: bool,
+            message_file_name: str = "messages.txt",
             model_name: str = "gemini",
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
@@ -187,6 +190,7 @@ class WorkflowBuilder:
         # 初期状態の設定
         initial_state = WorkflowState(
             model_name=model_name,
+            message_file_name=message_file_name,
             messages=[SystemMessage(content="あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。")],
             repo_url=repo_url,
             run_github_parser=run_github_parser,
