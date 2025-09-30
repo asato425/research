@@ -310,7 +310,7 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
-    def create_working_branch(self, local_path: str, branch_name: str) -> RepoOpResult:
+    def create_working_branch(self, local_path: str, branch_name: str = "work/llm") -> RepoOpResult:
         """
         指定したローカルリポジトリで新しい作業用ブランチを作成する。
 
