@@ -31,30 +31,56 @@ class WorkflowBuilder:
         workflow.add_node("github_repo_parser", self.github_repo_parser)
         workflow.add_node("workflow_generator", self.workflow_generator)
         workflow.add_node("workflow_linter", self.workflow_linter)
+        workflow.add_node("workflow_lint_success_check", lambda state: state)  # 仮の中間ノード
         workflow.add_node("workflow_executor", self.workflow_executor)
+        workflow.add_node("workflow_execute_success_check", lambda state: state)  # 仮の中間ノード
         workflow.add_node("explanation_generator", self.explanation_generator)
+        workflow.add_node("END", lambda state: state)  # 終了ノード
         
         # エントリーポイントの設定
         workflow.set_entry_point("github_repo_parser")
         
-        # ノード間のエッジの追加
-        workflow.add_edge("github_repo_parser", "workflow_generator")
-        workflow.add_edge("workflow_generator", "workflow_linter")
-        
         # 条件付きエッジの追加
         workflow.add_conditional_edges(
-            "workflow_linter",
-            self._lint_success,
-            {True: "workflow_executor", False: "workflow_generator"},
+            "github_repo_parser",
+            lambda state: state.finish_is,
+            {True: "END", False: "workflow_generator"},
         )
         workflow.add_conditional_edges(
-            "workflow_executor",
-            self._execute_success,
-            {True: "explanation_generator", False: "workflow_generator"},
+            "workflow_generator",
+            lambda state: state.finish_is,
+            {True: "END", False: "workflow_linter"},
+        )
+        # workflow_linter → finish_is チェック
+        workflow.add_conditional_edges(
+            "workflow_linter",
+            lambda state: state.finish_is,
+            {True: "END", False: "workflow_lint_success_check"}  # 仮の中間ノード
         )
 
-        # 最終ノードへのエッジの追加
-        workflow.add_edge("explanation_generator", END)
+        # 中間ノード workflow_lint_success_check で _lint_success を判定
+        workflow.add_conditional_edges(
+            "workflow_lint_success_check",
+            self._lint_success,
+            {True: "workflow_executor", False: "workflow_generator"}
+        )
+        # workflow_executor → finish_is チェック
+        workflow.add_conditional_edges(
+            "workflow_executor",
+            lambda state: state.finish_is,
+            {True: "END", False: "workflow_execute_success_check"}  # 仮の中間ノード
+        )
+        # 中間ノード workflow_execute_success_check で _execute_success を判定
+        workflow.add_conditional_edges(
+            "workflow_execute_success_check",
+            self._execute_success,
+            {True: "explanation_generator", False: "workflow_generator"}
+        )
+ 
+        workflow.add_edge("explanation_generator", "END")
+        
+        workflow.add_edge("END", END)
+
 
         # グラフのコンパイル
         return workflow.compile()
