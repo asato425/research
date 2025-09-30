@@ -26,7 +26,7 @@ class WorkflowGenerator:
         
         # 開始時間の記録
         start_time = time.time()
-
+        finish_is = False
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
