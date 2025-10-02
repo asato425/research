@@ -110,7 +110,7 @@ def main():
             print(f"- {name} ({stars}★) {url} | 主言語={main_lang}, 割合={ratio:.2%}, "
                   f"ファイル数={file_count}, ルートフォルダ数={root_folders}")
             count += 1
-        print(f"-----------合計 {count} 件-----------")
+
 
 # 実行方法:
 # poetry run python src/research/evaluation/repo_selector.py
