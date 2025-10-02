@@ -200,6 +200,6 @@ class WorkflowState(BaseModel):
             f"{BLUE}言語:{RESET} {self.language}\n\n\n"
             #f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
         )
-        if self.messages:
-            self.save_messages_to_file(self.message_file_name)
+        #if self.messages:
+            #self.save_messages_to_file(self.message_file_name)
         return result
