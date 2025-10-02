@@ -18,7 +18,6 @@ load_dotenv()
 class RepoOpResult(BaseModel):
     status: str
     message: str
-    path: str | None = None
 
 class RepoInfoResult(BaseModel):
     status: str
@@ -322,36 +321,35 @@ class GitHubTool:
             RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                path (str|None): 対象パス（未使用）
         """
         dev_repo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
         local_path_abs = os.path.abspath(local_path) if local_path else None
         if not local_path_abs:
-            result = RepoInfoResult(status="error", info=None, message="cloneに失敗しているため作業用ブランチを作成できません。")
+            result = RepoOpResult(status="error", message="cloneに失敗しているため作業用ブランチを作成できません。")
             log(result.status, result.message)
             return result
         if local_path_abs == dev_repo_path:
-            result = RepoInfoResult(status="error", info=None, message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。")
+            result = RepoOpResult(status="error", message="開発リポジトリ自身では作業用ブランチを作成できません。cloneしたリポジトリで実行してください。")
             log(result.status, result.message)
             return result
         
         # 現在あるブランチ名を確認し、すでに存在する場合はそのまま成功を返す
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=local_path, check=True)
-            result = RepoInfoResult(status="success", info=None, message=f"{branch_name}ブランチはすでに存在します")
+            result = RepoOpResult(status="success", message=f"{branch_name}ブランチはすでに存在します")
         except subprocess.CalledProcessError:
             try:
                 subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
-                result = RepoInfoResult(status="success", info=None, message=f"{branch_name}ブランチを作成しました")
+                result = RepoOpResult(status="success", message=f"{branch_name}ブランチを作成しました")
             except subprocess.CalledProcessError as e:
-                result = RepoInfoResult(status="error", info=None, message=str(e))
+                result = RepoOpResult(status="error", message=str(e))
         except Exception as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            result = RepoOpResult(status="error", message=str(e))
 
         log(result.status, result.message)
         return result
 
-    def create_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
+    def create_file(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         指定したローカルリポジトリ内に新しいファイルを作成する。
 
@@ -360,28 +358,27 @@ class GitHubTool:
             relative_path (str): 作成するファイルのパス（リポジトリルートからの相対パス）
 
         Returns:
-            RepoInfoResult:
+            RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         if os.path.exists(file_path):
-            result = RepoInfoResult(status="success", info=None, message=f"{file_path} は既に存在します。")
+            result = RepoOpResult(status="success", message=f"{file_path} は既に存在します。")
             log(result.status, result.message)
             return result
         try:
             with open(file_path, "w"):
                 pass
-            result = RepoInfoResult(status="success", info=None, message=f"{file_path}を作成しました")
+            result = RepoOpResult(status="success", message=f"{file_path}を作成しました")
         except Exception as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            result = RepoOpResult(status="error", message=str(e))
 
         log(result.status, result.message)
         return result
 
-    def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoInfoResult:
+    def write_to_file(self, local_path: str, relative_path: str, content: str) -> RepoOpResult:
         """
         指定したファイルに内容を書き込む。
 
@@ -391,23 +388,22 @@ class GitHubTool:
             content (str): 書き込む内容
 
         Returns:
-            RepoInfoResult:
+            RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         try:
             with open(file_path, "w") as f:
                 f.write(content or "")
-            result = RepoInfoResult(status="success", info=None, message=f"{file_path}に書き込みました")
+            result = RepoOpResult(status="success", message=f"{file_path}に書き込みました")
         except Exception as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            result = RepoOpResult(status="error", message=str(e))
 
         log(result.status, result.message)
         return result
 
-    def delete_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
+    def delete_file(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         指定したファイルを削除する。
 
@@ -416,25 +412,24 @@ class GitHubTool:
             relative_path (str): 削除対象ファイルのパス（リポジトリルートからの相対パス）
 
         Returns:
-            RepoInfoResult:
+            RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                info (str|None): 未使用
         """
         file_path = os.path.join(local_path, relative_path)
         if not os.path.exists(file_path):
-            result = RepoInfoResult(status="not_found", info=None, message=f"{file_path} は存在しません。")
+            result = RepoOpResult(status="not_found", message=f"{file_path} は存在しません。")
             return result
         try:
             os.remove(file_path)
-            result = RepoInfoResult(status="success", info=None, message=f"{file_path}を削除しました")
+            result = RepoOpResult(status="success", message=f"{file_path}を削除しました")
         except Exception as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            result = RepoOpResult(status="error", message=str(e))
 
         log(result.status, result.message)
         return result
 
-    def delete_folder(self, local_path: str, relative_path: str) -> RepoInfoResult:
+    def delete_folder(self, local_path: str, relative_path: str) -> RepoOpResult:
         """
         指定したフォルダを削除する。
 
@@ -446,18 +441,17 @@ class GitHubTool:
             RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                info (str|None): 未使用
         """
         folder_path = os.path.join(local_path, relative_path)
         if not os.path.exists(folder_path):
-            result = RepoInfoResult(status="not_found", info=None, message=f"{folder_path} は存在しません。")
+            result = RepoOpResult(status="not_found", message=f"{folder_path} は存在しません。")
             log(result.status, result.message)
             return result
         try:
             shutil.rmtree(folder_path)
-            result = RepoInfoResult(status="success", info=None, message=f"{folder_path}を削除しました")
+            result = RepoOpResult(status="success", message=f"{folder_path}を削除しました")
         except Exception as e:
-            result = RepoInfoResult(status="error", info=None, message=str(e))
+            result = RepoOpResult(status="error", message=str(e))
 
         log(result.status, result.message)
         return result
@@ -473,26 +467,25 @@ class GitHubTool:
             RepoOpResult:
                 status (str): "success" または "error" など、処理結果のステータス
                 message (str): 実行結果の説明メッセージ
-                path (str|None): 対象パス（未使用）
         """
         if not local_path:
-            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。", path=None)
+            result = RepoOpResult(status="error", message="local_pathが未設定です。clone後に実行してください。")
             log(result.status, result.message)
             return result
         elif not os.path.exists(local_path):
-            result = RepoOpResult(status="not_found", message=f"{local_path} は存在しません。", path=None)
+            result = RepoOpResult(status="not_found", message=f"{local_path} は存在しません。")
             log(result.status, result.message)
             return result
         try:
             shutil.rmtree(local_path)
-            result = RepoOpResult(status="success", message=f"{local_path}を削除しました", path=None)
+            result = RepoOpResult(status="success", message=f"{local_path}を削除しました")
             log(result.status, result.message)
             return result
         except Exception as e:
-            result = RepoOpResult(status="error", message=str(e), path=None)
+            result = RepoOpResult(status="error", message=str(e))
             log(result.status, result.message)
             return result
-
+    
     def read_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
         """
         指定したファイルの内容を読み込む。
@@ -575,5 +568,26 @@ class GitHubTool:
         payload = {"repo_url": repo_url, "head": head, "base": base, "title": title, "body": body}
         resp = requests.post(f"{self.base_url}/github/pull_request", json=payload)
         result = PullRequestResult(**resp.json())
+        log(result.status, result.message)
+        return result
+    
+    def delete_remote_repository(self, repo_url: str) -> RepoOpResult:
+        """
+        指定したGitHubリポジトリを削除する。
+
+        Args:
+            repo_url (str): 削除したいGitHubリポジトリのURL
+
+        Returns:
+            RepoOpResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+        """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリを削除できません")
+            self._set_github_token()
+
+        resp = requests.post(f"{self.base_url}/github/delete_repository", json={"repo_url": repo_url})
+        result = RepoOpResult(**resp.json())
         log(result.status, result.message)
         return result

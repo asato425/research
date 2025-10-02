@@ -62,6 +62,12 @@ class PullRequestResponse(BaseModel):
     status: str
     message: str
     pr_url: str | None = None
+   
+class DeleteRemoteRepoRequest(BaseModel):
+    repo_url: str = Field(..., description="削除したいGitHubリポジトリのURL") 
+class DeleteRemoteRepoResponse(BaseModel):
+    status: str
+    message: str
 
 def is_github_token_set() -> bool:
     """
@@ -343,3 +349,35 @@ def create_pull_request(req: PullRequestRequest):
     except Exception as e:
         result = PullRequestResponse(status="error", message=str(e), pr_url=None)
     return result
+
+@app.post("/github/delete_repository", response_model=DeleteRemoteRepoResponse)
+def delete_remote_repository(req: DeleteRemoteRepoRequest) -> DeleteRemoteRepoResponse:
+        """
+        指定したGitHubリポジトリ（リモート）を削除する。
+
+        Args:
+            repo_url (str): 削除したいGitHubリポジトリのURL
+
+        Returns:
+            DeleteRemoteRepoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                message (str): 実行結果の説明メッセージ
+        """
+        if not is_github_token_set():
+            return DeleteRemoteRepoResponse(status="error", message="GITHUB_TOKENがセットされていません")
+
+        try:
+            from github import Github
+            import re
+            GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+            g = Github(GITHUB_TOKEN)
+            m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
+            if not m:
+                return DeleteRemoteRepoResponse(status="error", message="リポジトリURLの形式が不正です")
+            owner, repo = m.group(1), m.group(2)
+            repo_obj = g.get_repo(f"{owner}/{repo}")
+            repo_obj.delete()
+            result = DeleteRemoteRepoResponse(status="success", message=f"{req.repo_url} を削除しました")
+        except Exception as e:
+            result = DeleteRemoteRepoResponse(status="error", message=str(e))
+        return result
