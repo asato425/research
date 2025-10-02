@@ -15,6 +15,7 @@ RUN_GHALINT = True
 RUN_PINACT = True
 GENERATE_WORKFLOW_REQUIRED_FILES = True
 GENERATE_BEST_PRACTICES = True
+BEST_PRACTICES_ENABLE_REUSE = True
 
 # モデルとエージェントの設定
 """
@@ -110,6 +111,7 @@ def main():
         run_pinact=RUN_PINACT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
         generate_workflow_required_files=GENERATE_WORKFLOW_REQUIRED_FILES and RUN_GITHUB_REPO_PARSER,
         generate_best_practices=GENERATE_BEST_PRACTICES and RUN_GITHUB_REPO_PARSER,
+        best_practices_enable_reuse=BEST_PRACTICES_ENABLE_REUSE,
         # その他のパラメータ
         work_ref=args.work_ref,
         yml_file_name=args.yml_file_name,
