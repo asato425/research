@@ -63,6 +63,7 @@ class LintResult(BaseModel):
     Lint結果とそのパース結果を保持する。
     """
     status: str = Field(..., description="Lint結果の状態")
+    lint_name: Optional[str] = Field(None, description="使用したLinterの名前（例: actionlint, ghalint）")
     raw_error: Any = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
 
@@ -124,7 +125,7 @@ class WorkflowState(BaseModel):
     run_pinact: bool = Field(True, description="pinactを実行するか")
     generate_workflow_required_files: bool = Field(True, description="workflow_required_filesを生成するか")
     generate_best_practices: bool = Field(True, description="best_practicesを生成するか")
-    
+    best_practices_enable_reuse: bool = Field(True, description="ベストプラクティスを使い回すか")
     # インスタンス化時に必須のフィールド(実行時はrepo_urlのみコマンドライン引数で必ず指定)
     repo_url: str = Field(..., description="リポジトリのURL")
     work_ref: str = Field(..., description="作業用のブランチの名前")
