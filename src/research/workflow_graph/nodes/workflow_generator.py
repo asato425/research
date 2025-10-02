@@ -89,7 +89,6 @@ class WorkflowGenerator:
         """
         # repo_infoをもとにワークフロー情報を生成する処理
         llm = LLMTool()
-        github = GitHubTool()
         finish_is = False
 
         if state.generate_best_practices:
@@ -126,14 +125,6 @@ class WorkflowGenerator:
             log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
             finish_is = True
         log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
-
-        create_branch_result = github.create_working_branch(
-            local_path=state.local_path,
-            branch_name=state.work_ref
-        )
-        if create_branch_result.status != "success":
-            log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
-            finish_is = True
 
         return result, human_prompt, finish_is
 
