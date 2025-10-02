@@ -1,5 +1,6 @@
 import requests
 import os
+from research.tools.github import GitHubTool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,7 +11,7 @@ if not GITHUB_TOKEN:
     raise ValueError("環境変数 GITHUB_TOKEN を設定してください")
 
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"}
-
+github = GitHubTool()
 def search_repositories(query: str, per_page: int = 10, page: int = 1):
     """GitHub API でリポジトリを検索する関数"""
     url = "https://api.github.com/search/repositories"
@@ -73,43 +74,63 @@ def get_root_folder_count(repo_full_name: str):
         return None
 
 def main():
-    #languages = ["Python", "Java", "JavaScript"]
-    languages = ["Java"]
-    star_threshold = 100
-    pushed_after = "2025-01-01"
+    #languages = ["Python", "Java", "JavaScript", "C", "Go", "Ruby"]
+    languages = ["Python"]  # テスト用に1言語に絞る
+    star_threshold = 1000
+    pushed_after = "2024-01-01"
     main_lang_threshold = 0.9
     max_file_count = 100          # 最大ファイル数
     max_root_folder_count = 20     # 最大ルートフォルダ数
-
+    repo_num = 1              # 各言語ごとに取得したいリポジトリ数
     for lang in languages:
-        count = 0
+        repo_count_all = 0 # 全検索件数
+        repo_count_filtered = 0 # フィルタリング後の件数
+        repo_url_list = []
         print(f"\n=== Language: {lang} ===")
         query = f"language:{lang} stars:>{star_threshold} pushed:>{pushed_after}"
-        result = search_repositories(query, per_page=100, page=1)
+        for page in range(1, 11):  # 最大10ページまで
+            result = search_repositories(query, per_page=100, page=page)
+            repo_count_all += len(result["items"])
+            for repo in result["items"]:
+                name = repo["full_name"]
+                stars = repo["stargazers_count"]
+                url = repo["html_url"]
+                pushed_at = repo["pushed_at"]
 
-        for repo in result["items"]:
-            name = repo["full_name"]
-            stars = repo["stargazers_count"]
-            url = repo["html_url"]
+                # 主言語割合チェック
+                main_lang, ratio, ok_lang = main_language_ratio(name, threshold=main_lang_threshold)
+                if not ok_lang:
+                    continue  # 条件外はスキップ
 
-            # 主言語割合チェック
-            main_lang, ratio, ok_lang = main_language_ratio(name, threshold=main_lang_threshold)
-            if not ok_lang:
-                continue  # 条件外はスキップ
+                # ファイル数チェック
+                file_count = get_file_count(name)
+                if file_count is None or file_count > max_file_count:
+                    continue
 
-            # ファイル数チェック
-            file_count = get_file_count(name)
-            if file_count is None or file_count > max_file_count:
-                continue
+                # ルートフォルダ数チェック
+                root_folders = get_root_folder_count(name)
+                if root_folders is None or root_folders > max_root_folder_count:
+                    continue
 
-            # ルートフォルダ数チェック
-            root_folders = get_root_folder_count(name)
-            if root_folders is None or root_folders > max_root_folder_count:
-                continue
-
-            print(f"- {name} ({stars}★) {url} | 主言語={main_lang}, 割合={ratio:.2%}, "
-                  f"ファイル数={file_count}, ルートフォルダ数={root_folders}")
-            count += 1
+                print(f"- {name} ({stars}★) {url} | 主言語={main_lang}, 割合={ratio:.2%}, "
+                    f"ファイル数={file_count}, ルートフォルダ数={root_folders}, 最終更新日={pushed_at}")
+                repo_url_list.append(url)
+                repo_count_filtered += 1
+                if repo_count_filtered >= repo_num:
+                    break
+            if repo_count_filtered >= repo_num:
+                break
+        print(f"\n=== 合計 {repo_count_all} 件のリポジトリを検索し、条件を満たしたリポジトリは {len(repo_url_list)} 件でした ===")
+        # コピペしやすい形に整形してファイルに出力
+        with open(f"src/research/evaluation/{lang}_repo_urls.txt", "w", encoding="utf-8") as f:
+            for i, repo_url in enumerate(repo_url_list, 1):
+                result = github.fork_repository(repo_url)
+                if result.status == "success":
+                    f.write(f'{i}: "{result.fork_url}",\n')
+                else:
+                    print(f"{i}: フォークに失敗したので終了します(url: {repo_url})")
+                    return # フォークに失敗したらそこで終了
+        print(f"\n=== {lang}リポジトリのコピー用リポジトリURLリストを {lang}_repo_urls.txt に保存しました ===")
 
 
 # 実行方法:
