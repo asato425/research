@@ -63,7 +63,7 @@ class ExplanationGenerator:
             # 2. Dependabot security updatesの設定方法をTavilyで検索し要約
             retriever = rag.rag_tavily(max_results=3)
             query = "GitHub Dependabot security updates 設定方法"
-            search_docs = retriever.get_relevant_documents(query)
+            search_docs = retriever.invoke(query)
             # 検索結果をまとめてLLMで要約
             dependabot_info = "\n\n".join([doc.page_content for doc in search_docs])
             dependabot_prompt = ChatPromptTemplate.from_messages([
