@@ -376,6 +376,12 @@ def delete_remote_repository(req: DeleteRemoteRepoRequest) -> DeleteRemoteRepoRe
                 return DeleteRemoteRepoResponse(status="error", message="リポジトリURLの形式が不正です")
             owner, repo = m.group(1), m.group(2)
             repo_obj = g.get_repo(f"{owner}/{repo}")
+            
+            # フォークでないリポジトリは削除しない
+            if not repo_obj.fork:
+                return DeleteRemoteRepoResponse(status="error", message="このリポジトリはフォークではないため削除できません")
+
+            # フォークリポジトリを削除
             repo_obj.delete()
             result = DeleteRemoteRepoResponse(status="success", message=f"{req.repo_url} を削除しました")
         except Exception as e:
