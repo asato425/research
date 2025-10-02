@@ -153,6 +153,7 @@ class WorkflowBuilder:
             run_pinact: bool,
             generate_workflow_required_files: bool,
             generate_best_practices: bool,
+            best_practices_enable_reuse: bool,
             message_file_name: str = "messages.txt",
             model_name: str = "gemini",
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
@@ -176,6 +177,7 @@ class WorkflowBuilder:
             run_pinact (bool): pinactを実行するか
             generate_workflow_required_files (bool): workflow_required_filesを生成するか
             generate_best_practices (bool): best_practicesを生成するか
+            best_practices_enable_reuse (bool): ベストプラクティスを使い回すか
 
             **その他のパラメータ**
             work_ref (str): 作業用のブランチの名前(初期値: "test")
@@ -203,6 +205,7 @@ class WorkflowBuilder:
             run_pinact=run_pinact,
             generate_workflow_required_files=generate_workflow_required_files,
             generate_best_practices=generate_best_practices,
+            best_practices_enable_reuse=best_practices_enable_reuse,
             work_ref=work_ref,
             yml_file_name=yml_file_name,
             max_required_files=max_required_files,
