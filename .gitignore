@@ -66,4 +66,5 @@ coverage.xml
 .env
 .venv
 messages.txt
-message_history/
+src/research/evaluation/*.xlsx
+src/research/message_history/
