@@ -42,6 +42,7 @@ class WorkflowLinter:
                 parse_result = parser.lint_result_parse(actionlint_result)
                 actionlint_result = LintResult(
                     status=actionlint_result.status,
+                    lint_name="actionlint",
                     raw_error=actionlint_result.raw_output,
                     parsed_error=parse_result.parse_details
                 )
@@ -50,6 +51,7 @@ class WorkflowLinter:
                 log("info", "actionlintによるLintはスキップされました")
                 actionlint_result = LintResult(
                     status="success",
+                    lint_name="actionlint is skipped",
                     raw_error=None,
                     parsed_error=None
                 )
@@ -67,6 +69,7 @@ class WorkflowLinter:
                 parse_result = parser.lint_result_parse(ghalint_result)
                 ghalint_result = LintResult(
                     status=ghalint_result.status,
+                    lint_name="ghalint",
                     raw_error=ghalint_result.raw_output,
                     parsed_error=parse_result.parse_details
                 )
@@ -78,6 +81,7 @@ class WorkflowLinter:
             log("info", "WorkflowLinterはスキップされました")
             lint_result = LintResult(
                 status="success",
+                lint_name="linter is skipped",
                 raw_error=None,
                 parsed_error=None
             )
