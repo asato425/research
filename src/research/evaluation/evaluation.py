@@ -2,13 +2,6 @@ from research.log_output.log import set_log_is
 from research.workflow_graph.builder import WorkflowBuilder
 from research.workflow_graph.state import WorkflowState
 from datetime import datetime
-"""
-実験の流れ(実装すること)
-1. 条件を満たしたGitHubリポジトリをフォークする(言語ごとに指定した数ずつ,repo_selector.pyで実装)
-2. フォークしたリポジトリに対してワークフローエージェントを実行する(言語ごとに)
-3. ワークフローエージェントの最終的な出力を取得する
-4. 最終的な出力をエクセルなどに保存して分析する
-"""
 # ノードの実行制御フラグ
 RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
