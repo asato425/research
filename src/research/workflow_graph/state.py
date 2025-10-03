@@ -21,7 +21,7 @@ class RequiredFile(BaseModel):
             f"ファイル名: {self.name}",
             f"説明: {self.description}",
             f"パス: {self.path}",
-            f"内容: {self.content if self.content else 'なし'}"
+            f"内容: {'あり' if self.content else 'なし'}"
         ]
         return "\n".join(lines)
     
@@ -68,7 +68,7 @@ class LintResult(BaseModel):
     parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
 
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略"
+        return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
 
     def __repr__(self):
         return f"LintResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}}}"
@@ -201,6 +201,19 @@ class WorkflowState(BaseModel):
             f"{BLUE}言語:{RESET} {self.language}\n\n\n"
             #f"{BLUE}ベストプラクティス:{RESET} {self.best_practices}\n\n"
         )
-        #if self.messages:
-            #self.save_messages_to_file(self.message_file_name)
+        if self.generate_workflows:
+            result += f"{BLUE}生成ワークフロー:{RESET}\n"
+            for i, gw in enumerate(self.generate_workflows, 1):
+                result += f"  ワークフロー {i}:\n    {gw.summary().replace('\n', '\n    ')}\n"
+            result += "\n"
+        if self.lint_results:
+            result += f"{BLUE}Lint結果:{RESET}\n"
+            for i, lr in enumerate(self.lint_results, 1):
+                result += f"  Lint結果 {i}:\n    {lr.summary().replace('\n', '\n    ')}\n"
+            result += "\n"
+        if self.workflow_run_results:
+            result += f"{BLUE}ワークフロー実行結果:{RESET}\n"
+            for i, wrr in enumerate(self.workflow_run_results, 1):
+                result += f"  ワークフロー実行結果 {i}:\n    {wrr.summary().replace('\n', '\n    ')}\n"
+            result += "\n"
         return result
