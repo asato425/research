@@ -29,12 +29,13 @@ class LinterTool:
             None
         """
 
-    def actionlint(self, local_path: str) -> LintResult:
+    def actionlint(self, local_path: str, filename: str | None = None) -> LintResult:
         """
         指定ディレクトリでactionlintを実行し、結果をLintResultで返す。
 
         Args:
             local_path (str): プロジェクトのルートディレクトリ
+            filename (str|None): チェックする特定のファイル名（省略時は全ファイルをチェック）
 
         Returns:
             LintResult:
@@ -53,8 +54,11 @@ class LinterTool:
             log(result.status, f"actionlint: {result.error_message}")
             return result
         try:
+            cmd = ["actionlint", "-format", "{{json .}}"]
+            if filename:
+                cmd.append(filename)  # ファイル名を追加
             proc = subprocess.run(
-                ["actionlint", "-format", "{{json .}}"],
+                cmd,
                 cwd=local_path,
                 capture_output=True, text=True, check=False
             )
@@ -92,12 +96,13 @@ class LinterTool:
             return result
 
 
-    def ghalint(self, local_path: str) -> LintResult:
+    def ghalint(self, local_path: str, filename: str | None = None) -> LintResult:
         """
         指定ディレクトリでghalintを実行し、結果をLintResultで返す。
 
         Args:
             local_path (str): プロジェクトのルートディレクトリ
+            filename (str|None): チェックする特定のファイル名（省略時は全ファイルをチェック）
 
         Returns:
             LintResult:
@@ -116,8 +121,11 @@ class LinterTool:
             log(result.status, f"ghalint: {result.error_message}")
             return result
         try:
+            cmd = ["ghalint", "run"]
+            if filename:
+                cmd.append(filename)  # ファイル名を追加
             proc = subprocess.run(
-                ["ghalint", "run"],
+                cmd,
                 cwd=local_path,
                 capture_output=True, text=True, check=False
             )
@@ -145,12 +153,13 @@ class LinterTool:
             log(result.status, f"ghalint: {result.error_message}")
             return result
 
-    def pinact(self, local_path: str) -> dict:
+    def pinact(self, local_path: str, filename: str | None = None) -> dict:
         """
         指定ディレクトリでpinact runを実行し、結果をdictで返す。
 
         Args:
             local_path (str): プロジェクトのルートディレクトリ
+            filename (str|None): チェックする特定のファイル名（省略時は全ファイルをチェック）
 
         Returns:
             dict:
@@ -160,8 +169,11 @@ class LinterTool:
                 returncode (int): プロセスの終了コード
         """
         try:
+            cmd = ["pinact", "run"]
+            if filename:
+                cmd.append(filename)  # ファイル名を追加
             result = subprocess.run(
-                ["pinact", "run"],
+                cmd,
                 cwd=local_path,
                 capture_output=True,
                 text=True,

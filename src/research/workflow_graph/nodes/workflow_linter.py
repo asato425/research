@@ -34,11 +34,12 @@ class WorkflowLinter:
             parser = ParserTool(model_name=self.model_name)
 
             local_path = state.local_path
+            filename = ".github/workflows/" + state.yml_file_name
 
             # actionlintによるチェック
             if state.run_actionlint:
                 log("info", "actionlintによるLintを開始します")
-                actionlint_result = linter.actionlint(local_path)
+                actionlint_result = linter.actionlint(local_path, filename)
                 parse_result = parser.lint_result_parse(actionlint_result)
                 actionlint_result = LintResult(
                     status=actionlint_result.status,
@@ -58,14 +59,14 @@ class WorkflowLinter:
 
             if state.run_pinact and actionlint_result.status == "success":
                 log("info", "actionlintによるLintは成功またはスキップされたのでpinactでSHAに変換します")
-                linter.pinact(local_path)
+                linter.pinact(local_path, filename)
             else:
                 log("info", "pinactはスキップします")
             
             if state.run_ghalint and actionlint_result.status == "success":
                 log("info", "ghalintによるLintを開始します")
                 # ghalintによるチェック
-                ghalint_result = linter.ghalint(local_path)
+                ghalint_result = linter.ghalint(local_path, filename)
                 parse_result = parser.lint_result_parse(ghalint_result)
                 ghalint_result = LintResult(
                     status=ghalint_result.status,
