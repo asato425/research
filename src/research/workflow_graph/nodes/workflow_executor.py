@@ -54,7 +54,7 @@ class WorkflowExecutor:
 
             if workflow_execute_result.status != "success":
                 log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
-                log("error", f"詳細: {workflow_execute_result}")
+                log("error", f"詳細: {workflow_execute_result}、repo_url: {state.repo_url}, ref: {state.work_ref}, workflow_id: {state.yml_file_name}")
                 return {"finish_is": True}
             
             get_workflow_log_result = github.get_latest_workflow_logs(
