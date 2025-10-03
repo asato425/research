@@ -25,9 +25,9 @@ MODEL_NAME = "gemini-2.5-flash"
 
 now_str = datetime.now().strftime("%m%d_%H%M")
 # コマンドライン引数のデフォルト値
-WORK_REF = f"work/{MODEL_NAME}/{now_str}"  # 作業用ブランチ名
+WORK_REF = "work_" + now_str  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
-MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
+MAX_REQUIRED_FILES = 10 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
 LINT_LOOP_COUNT_MAX = 3 # Lintのループ回数の上限
 BEST_PRACTICE_NUM = 10 # 言語固有のベストプラクティスの数
@@ -105,6 +105,7 @@ def save_states_to_excel(states: list[WorkflowState], filename: str):
             else:
                 row[key] = value
         rows.append(row)
+        print(state)  # 各 state の summary を表示
     
     df = pd.DataFrame(rows)
     df.to_excel(filename, index=False, engine="openpyxl")
@@ -113,15 +114,22 @@ def save_states_to_excel(states: list[WorkflowState], filename: str):
 def main():
     # ここに評価したいリポジトリのURL(フォーク済み)を追加してください(今書いてあるのは例です)
     language_repo_dict = {
+        "python": {
+            1: "https://github.com/asato425/public-apis",
+            # 2: "https://github.com/asato425/awesome-python",
+            # 3: "https://github.com/asato425/DeepSeek-V3",
+            # 4: "https://github.com/asato425/whisper",
+            # 5: "https://github.com/asato425/Deep-Live-Cam"
+        },
         # "python": {
-        #     1:"https://github.com/asato425/test_",
+        #     1: "https://github.com/asato425/test_python"
         # },
         # "javascript": {
         #     1:"https://github.com/axios/axios"
         # },
-        "java": {
-            1:"https://github.com/asato425/test_java",
-        },
+        # "java": {
+        #     1:"https://github.com/asato425/test_java",
+        # },
         # "c": {
         #     1:"https://github.com/catboost/catboost"
         # },
