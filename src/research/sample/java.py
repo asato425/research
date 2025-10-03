@@ -7,7 +7,7 @@ RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(gene
 RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = True
 RUN_WORKFLOW_EXECUTER = True
-RUN_EXPLANATION_GENERATOR = True
+RUN_EXPLANATION_GENERATOR = False
 
 # 細かい実行制御フラグ
 RUN_ACTIONLINT = True
@@ -23,7 +23,7 @@ MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-m
 MODEL_NAME = "gemini-2.5-flash"
 
 # コマンドライン引数のデフォルト値
-WORK_REF = "work_"+MODEL_NAME  # 作業用ブランチ名
+WORK_REF = "work_testtest"  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
 MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
@@ -111,6 +111,7 @@ def main():
         run_pinact=RUN_PINACT and RUN_LINTER and RUN_WORKFLOW_GENERATOR,
         generate_workflow_required_files=GENERATE_WORKFLOW_REQUIRED_FILES and RUN_GITHUB_REPO_PARSER,
         generate_best_practices=GENERATE_BEST_PRACTICES and RUN_GITHUB_REPO_PARSER,
+        best_practices_enable_reuse=True,
         # その他のパラメータ
         work_ref=args.work_ref,
         yml_file_name=args.yml_file_name,
