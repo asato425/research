@@ -77,11 +77,12 @@ def main():
     #languages = ["Python", "Java", "JavaScript", "C", "Go", "Ruby"]
     languages = ["Python"]  # テスト用に1言語に絞る
     star_threshold = 1000
-    pushed_after = "2024-01-01"
+    pushed_after = "2025-01-01"
     main_lang_threshold = 0.9
     max_file_count = 100          # 最大ファイル数
     max_root_folder_count = 20     # 最大ルートフォルダ数
-    repo_num = 1              # 各言語ごとに取得したいリポジトリ数
+    repo_num = 5                   # 各言語ごとに取得したいリポジトリ数
+    
     for lang in languages:
         repo_count_all = 0 # 全検索件数
         repo_count_filtered = 0 # フィルタリング後の件数
@@ -122,7 +123,8 @@ def main():
                 break
         print(f"\n=== 合計 {repo_count_all} 件のリポジトリを検索し、条件を満たしたリポジトリは {len(repo_url_list)} 件でした ===")
         # コピペしやすい形に整形してファイルに出力
-        with open(f"src/research/evaluation/{lang}_repo_urls.txt", "w", encoding="utf-8") as f:
+        filename = f"src/research/evaluation/{lang.lower()}_repo_urls.txt"
+        with open(filename, "w", encoding="utf-8") as f:
             for i, repo_url in enumerate(repo_url_list, 1):
                 result = github.fork_repository(repo_url)
                 if result.status == "success":
@@ -130,7 +132,7 @@ def main():
                 else:
                     print(f"{i}: フォークに失敗したので終了します(url: {repo_url})")
                     return # フォークに失敗したらそこで終了
-        print(f"\n=== {lang}リポジトリのコピー用リポジトリURLリストを {lang}_repo_urls.txt に保存しました ===")
+        print(f"\n=== {lang}リポジトリのコピー用リポジトリURLリストを {filename} に保存しました ===")
 
 
 # 実行方法:
