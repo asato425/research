@@ -74,19 +74,19 @@ def get_root_folder_count(repo_full_name: str):
         return None
 
 def main():
-    #languages = ["Python", "Java", "JavaScript", "C", "Go", "Ruby"]
-    languages = ["Python"]  # テスト用に1言語に絞る
+    languages = ["Python", "Java", "JavaScript", "C"]
+    #languages = ["Python"]  # テスト用に1言語に絞る
     star_threshold = 1000
-    pushed_after = "2025-01-01"
-    main_lang_threshold = 0.9
-    max_file_count = 100          # 最大ファイル数
-    max_root_folder_count = 20     # 最大ルートフォルダ数
-    repo_num = 5                   # 各言語ごとに取得したいリポジトリ数
-    
+    pushed_after = "2024-10-01"
+    main_lang_threshold = 0.8
+    max_file_count = 200          # 最大ファイル数
+    max_root_folder_count = 30     # 最大ルートフォルダ数
+    repo_num = 10                  # 各言語ごとに取得したいリポジトリ数
+    repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
         repo_count_filtered = 0 # フィルタリング後の件数
-        repo_url_list = []
+        repo_url_dict[lang] = []
         print(f"\n=== Language: {lang} ===")
         query = f"language:{lang} stars:>{star_threshold} pushed:>{pushed_after}"
         for page in range(1, 11):  # 最大10ページまで
@@ -115,16 +115,18 @@ def main():
 
                 print(f"- {name} ({stars}★) {url} | 主言語={main_lang}, 割合={ratio:.2%}, "
                     f"ファイル数={file_count}, ルートフォルダ数={root_folders}, 最終更新日={pushed_at}")
-                repo_url_list.append(url)
+                repo_url_dict[lang].append(url)
                 repo_count_filtered += 1
                 if repo_count_filtered >= repo_num:
                     break
             if repo_count_filtered >= repo_num:
                 break
-        print(f"\n=== 合計 {repo_count_all} 件のリポジトリを検索し、条件を満たしたリポジトリは {len(repo_url_list)} 件でした ===")
-        # コピペしやすい形に整形してファイルに出力
-        filename = f"src/research/evaluation/{lang.lower()}_repo_urls.txt"
-        with open(filename, "w", encoding="utf-8") as f:
+        print(f"\n=== 合計 {repo_count_all} 件のリポジトリを検索し、条件を満たしたリポジトリは {len(repo_url_dict.get(lang, []))} 件でした ===")
+    # コピペしやすい形に整形してファイルに出力
+    filename = "src/research/evaluation/repo_urls.txt"
+    with open(filename, "w", encoding="utf-8") as f:
+        for lang, repo_url_list in repo_url_dict.items():
+            f.write(f"# {lang} リポジトリのコピー用リポジトリURLリスト\n")
             for i, repo_url in enumerate(repo_url_list, 1):
                 result = github.fork_repository(repo_url)
                 if result.status == "success":
@@ -132,7 +134,9 @@ def main():
                 else:
                     print(f"{i}: フォークに失敗したので終了します(url: {repo_url})")
                     return # フォークに失敗したらそこで終了
-        print(f"\n=== {lang}リポジトリのコピー用リポジトリURLリストを {filename} に保存しました ===")
+            f.write("\n")
+       
+    print(f"\n=== リポジトリのコピー用リポジトリURLリストを {filename} に保存しました ===")
 
 
 # 実行方法:
