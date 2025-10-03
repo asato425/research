@@ -43,19 +43,20 @@ class WorkflowExecutor:
         if state.run_workflow_executer:
             # ワークフローの実行
             if len(state.generate_workflows) > 0:
-                workflow_execute_result = github.dispatch_workflow(
-                    repo_url=state.repo_url,
-                    ref=state.work_ref,
-                    workflow_id=state.yml_file_name
-                )
+                pass
+                # workflow_execute_result = github.dispatch_workflow(
+                #     repo_url=state.repo_url,
+                #     ref=state.work_ref,
+                #     workflow_id=state.yml_file_name
+                #)
             else:
                 log("error", "生成されたワークフローが存在しないためプログラムを終了します")
                 return {"finish_is": True}
 
-            if workflow_execute_result.status != "success":
-                log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
-                log("error", f"詳細: {workflow_execute_result}、repo_url: {state.repo_url}, ref: {state.work_ref}, workflow_id: {state.yml_file_name}")
-                return {"finish_is": True}
+            # if workflow_execute_result.status != "success":
+            #     log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
+            #     log("error", f"詳細: {workflow_execute_result}、repo_url: {state.repo_url}, ref: {state.work_ref}, workflow_id: {state.yml_file_name}")
+            #     return {"finish_is": True}
             
             get_workflow_log_result = github.get_latest_workflow_logs(
                 repo_url=state.repo_url,
