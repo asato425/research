@@ -51,13 +51,13 @@ class GitHubRepoParser:
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
             return {"finish_is": True}
 
-        # .githubフォルダの削除
-        # delete_github_folder_result = github.delete_folder(
-        #     local_path=local_path,
-        #     relative_path=".github"
-        # )
-        # if delete_github_folder_result.status != "success":
-        #     pass
+        #.githubフォルダの削除
+        delete_github_folder_result = github.delete_folder(
+            local_path=local_path,
+            relative_path=".github"
+        )
+        if delete_github_folder_result.status != "success":
+            pass
 
         # ファイルツリーの取得
         file_tree_result = github.get_file_tree(local_path)
