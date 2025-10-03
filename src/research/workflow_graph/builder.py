@@ -7,6 +7,7 @@ from research.workflow_graph.nodes.workflow_executor import WorkflowExecutor
 from research.workflow_graph.nodes.explanation_generator import ExplanationGenerator
 from research.log_output.log import log
 from langchain_core.messages import SystemMessage
+import time
 
 class WorkflowBuilder:
     def __init__(self, 
@@ -213,9 +214,16 @@ class WorkflowBuilder:
             lint_loop_count_max=lint_loop_count_max,
             best_practice_num=best_practice_num
         )
+        # 開始時間の記録
+        start_time = time.time()
         # グラフの実行
         final_state = self.graph.invoke(initial_state)
-        
+
+        # 終了時間の記録
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        log("info", f"ワークフローの実行が完了しました。総実行時間: {elapsed_time:.2f}秒")
+
         # ここにLinterやExecutorの結果、ループ回数などの記録を出力することにするかも(main.pyで書いている)
 
 
