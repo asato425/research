@@ -107,8 +107,10 @@ def fork_repository(req: ForkRequest):
 def dispatch_workflow(req: WorkflowDispatchRequest):
     """
     指定したワークフローをworkflow_dispatchで手動実行する。
+    存在しないエラーの場合は10秒待機して最大5分（30回）までリトライする。
     """
     import re
+    import time
     if not is_github_token_set():
         return WorkflowDispatchResponse(status="error", message="GITHUB_TOKENがセットされていません")
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -122,14 +124,26 @@ def dispatch_workflow(req: WorkflowDispatchRequest):
     owner, repo = m.group(1), m.group(2)
     url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{req.workflow_id}/dispatches"
     data = {"ref": req.ref}
-    try:
-        resp = requests.post(url, headers=headers, json=data)
-        if resp.status_code == 204:
-            return WorkflowDispatchResponse(status="success", message="ワークフローの手動実行をトリガーしました")
-        else:
-            return WorkflowDispatchResponse(status="error", message=f"APIエラー: {resp.status_code} {resp.text}")
-    except Exception as e:
-        return WorkflowDispatchResponse(status="error", message=str(e))
+    max_retries = 30  # 10秒×30回＝5分
+    for retry in range(max_retries):
+        try:
+            resp = requests.post(url, headers=headers, json=data)
+            if resp.status_code == 204:
+                return WorkflowDispatchResponse(status="success", message="ワークフローの手動実行をトリガーしました")
+            elif resp.status_code == 404:
+                # 存在しない場合は10秒待機してリトライ
+                if retry < max_retries - 1:
+                    time.sleep(10)
+                    continue
+                else:
+                    return WorkflowDispatchResponse(
+                        status="error",
+                        message=f"APIエラー: 404（5分間リトライしても存在しませんでした） {resp.text}"
+                    )
+            else:
+                return WorkflowDispatchResponse(status="error", message=f"APIエラー: {resp.status_code} {resp.text}")
+        except Exception as e:
+            return WorkflowDispatchResponse(status="error", message=str(e))
 
 
 @app.post("/workflow/latest", response_model=WorkflowResponse)
