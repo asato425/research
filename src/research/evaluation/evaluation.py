@@ -105,7 +105,7 @@ def save_states_to_excel(states: list[WorkflowState], filename: str):
             else:
                 row[key] = value
         rows.append(row)
-        print(state)  # 各 state の summary を表示
+        #print(state)  # 各 state の summary を表示
     
     df = pd.DataFrame(rows)
     df.to_excel(filename, index=False, engine="openpyxl")
@@ -116,10 +116,10 @@ def main():
     language_repo_dict = {
         "python": {
             1: "https://github.com/asato425/public-apis",
-            # 2: "https://github.com/asato425/awesome-python",
-            # 3: "https://github.com/asato425/DeepSeek-V3",
-            # 4: "https://github.com/asato425/whisper",
-            # 5: "https://github.com/asato425/Deep-Live-Cam"
+            2: "https://github.com/asato425/awesome-python",
+            3: "https://github.com/asato425/DeepSeek-V3",
+            4: "https://github.com/asato425/whisper",
+            5: "https://github.com/asato425/Deep-Live-Cam"
         },
         # "python": {
         #     1: "https://github.com/asato425/test_python"
@@ -133,9 +133,6 @@ def main():
         # "c": {
         #     1:"https://github.com/catboost/catboost"
         # },
-        # "c++": {
-        #     1:"https://github.com/cpp-ethereum/ethash"
-        # }
     }
     for language, repos in language_repo_dict.items():
         print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
