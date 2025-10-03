@@ -50,3 +50,41 @@ def get_yml_best_practices(state: WorkflowState) -> str:
         log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを10個取得しました。")
         
     return result
+
+def main(language: str, best_practice_num: int = 10):
+    state = WorkflowState(
+            model_name="gpt-5",
+            message_file_name="messages.yaml",
+            messages=[],
+            repo_url="http://example.com",
+            run_github_parser=True,
+            run_workflow_generator=True,
+            run_linter=True,
+            run_workflow_executer=True,
+            run_explanation_generator=True,
+            run_actionlint=True,
+            run_ghalint=True,
+            run_pinact=True,
+            generate_workflow_required_files=True,
+            generate_best_practices=True,
+            best_practices_enable_reuse=False,
+            work_ref="test",
+            yml_file_name="main.yml",
+            max_required_files=5,
+            loop_count_max=3,
+            lint_loop_count_max=2,
+            best_practice_num=best_practice_num,
+            language=language
+        )
+    return get_yml_best_practices(state)
+    
+    
+# 言語ごとの使い回し用ベストプラクティスを生成させるために使用します
+# 実行方法:
+# poetry run python src/research/prompts/yml_best_practices.py
+if __name__ == "__main__":
+    language = "C"
+    result = main(language, 10)
+    # ファイルに保存
+    with open(f'src/research/best_practices/{language.lower()}.md', 'w', encoding='utf-8') as f:
+        f.write(result)
