@@ -106,7 +106,7 @@ class WorkflowBuilder:
             log("warning", "グラフの分岐：Linter自体の実行に失敗しており、ワークフローの修正はできないため進みます")
             return True
         # ループ回数が上限に達しているならTrue
-        if state.loop_count >= state.lint_loop_count_max:
+        if state.loop_count >= state.loop_count_max:
             log("warning", "グラフの分岐：ループ回数が上限に達したため、ワークフローの修正は行いません")
             return True
 
