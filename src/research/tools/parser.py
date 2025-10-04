@@ -108,7 +108,7 @@ class ParserTool:
                     ),
                     (
                         "human",
-                        "以下はGitHub Actionsのlint結果です。エラーがあればその内容を分かりやすく要約してください。\n"
+                        "以下はGitHub Actionsのlint結果です。エラーがあればそのエラーの詳細をわかりやすく教えてください。\n"
                         "local_path: {local_path}\n"
                         "status: {status}\n"
                         "error_message: {error_message}\n"
