@@ -51,7 +51,7 @@ class ParserTool:
                     ),
                     (
                         "human",
-                        "以下のGitHub Actionsのワークフロー実行結果に基づいてエラーがあればそのエラーの詳細をわかりやすく教えてください。\n"
+                        "以下のGitHub Actionsのワークフロー実行結果に基づいてエラーの詳細をわかりやすく教えてください。\n"
                         "ワークフローの実行状態: {status}\n"
                         "ワークフローの実行結果: {conclusion}\n"
                         "ワークフロー実行結果の内容: {message}\n"
@@ -108,7 +108,7 @@ class ParserTool:
                     ),
                     (
                         "human",
-                        "以下はGitHub Actionsのlint結果です。エラーがあればそのエラーの詳細をわかりやすく教えてください。\n"
+                        "以下はGitHub Actionsのlint結果です。エラーの詳細をわかりやすく教えてください。\n"
                         "local_path: {local_path}\n"
                         "status: {status}\n"
                         "error_message: {error_message}\n"
