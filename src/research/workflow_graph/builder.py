@@ -185,7 +185,6 @@ class WorkflowBuilder:
             yml_file_name (str): 生成されたYAMLファイルの名前(初期値: "ci.yml")
             max_required_files (int): ワークフロー生成に必要な主要ファイルの最大数(初期値: 5)
             loop_count_max (int): ワークフローのループ回数の上限(初期値: 5)
-            lint_loop_count_max (int): 生成とLintのループ回数の上限、loop_count_maxより小さい(初期値: 3)
             best_practice_num (int): 言語固有のベストプラクティスの数(初期値: 10)
         Returns:
             WorkflowState: 最終的なワークフローの状態
@@ -211,7 +210,6 @@ class WorkflowBuilder:
             yml_file_name=yml_file_name,
             max_required_files=max_required_files,
             loop_count_max=loop_count_max,
-            lint_loop_count_max=lint_loop_count_max,
             best_practice_num=best_practice_num
         )
         # 開始時間の記録
