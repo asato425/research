@@ -92,6 +92,7 @@ class WorkflowLinter:
         elapsed = time.time() - start_time
         log("info", f"WorkflowLinter実行時間: {elapsed:.2f}秒")
         return {
+            "execution_time": state.execution_time + elapsed,
             "lint_results": lint_result_list,
             "prev_node": "workflow_linter",
             "node_history": ["workflow_linter"]

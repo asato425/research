@@ -109,6 +109,7 @@ class WorkflowState(BaseModel):
     必要に応じて属性を追加・修正してください。
     """
     final_status: str | None = Field(None, description="最終的なワークフローの状態")
+    execution_time: float = Field(0, description="実行にかかった時間（秒）")
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
     
     messages: Annotated[list[BaseMessage], operator.add] = Field(

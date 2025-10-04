@@ -84,6 +84,7 @@ class WorkflowGenerator:
         log("info", f"WorkflowGenerator実行時間: {elapsed:.2f}秒")
         
         return {
+            "execution_time": state.execution_time + elapsed,
             "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
             "generate_workflows": [result],
             "prev_node": "workflow_generator",

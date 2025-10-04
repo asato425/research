@@ -122,10 +122,6 @@ class WorkflowExecutor:
                 parsed_error=None,
                 failure_category=None
             )
-        # 終了時間の記録とログ出力
-        elapsed = time.time() - start_time
-        log("info", f"WorkflowExecutor実行時間: {elapsed:.2f}秒")
-        
         if result.failure_category:
             if result.failure_category.category == "project_error":
                 final_status = "project_error"
@@ -133,7 +129,13 @@ class WorkflowExecutor:
                 final_status = "yml_error"
         else:
             final_status = "success"
+        
+        # 終了時間の記録とログ出力
+        elapsed = time.time() - start_time
+        log("info", f"WorkflowExecutor実行時間: {elapsed:.2f}秒")
+        
         return {
+            "execution_time": state.execution_time + elapsed,
             "workflow_run_results": [result],
             "prev_node": "workflow_executor",
             "node_history": ["workflow_executor"],

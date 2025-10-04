@@ -93,6 +93,7 @@ class ExplanationGenerator:
         elapsed = time.time() - start_time
         log("info", f"ExplanationGenerator実行時間: {elapsed:.2f}秒")
         return {
+            "execution_time": state.execution_time + elapsed,
             "generate_explanation": final_explanation,
             "prev_node": "explanation_generator",
             "node_history": ["explanation_generator"]

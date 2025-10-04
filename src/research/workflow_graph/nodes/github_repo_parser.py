@@ -131,6 +131,7 @@ class GitHubRepoParser:
         log("info", f"GitHubRepoParser実行時間: {elapsed:.2f}秒")
         
         return {
+            "execution_time": state.execution_time + elapsed,
             "local_path": local_path,
             "file_tree": file_tree,
             "repo_info": repo_info,
