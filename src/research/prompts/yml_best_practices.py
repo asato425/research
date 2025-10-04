@@ -72,7 +72,6 @@ def main(language: str, best_practice_num: int = 10):
             yml_file_name="main.yml",
             max_required_files=5,
             loop_count_max=3,
-            lint_loop_count_max=2,
             best_practice_num=best_practice_num,
             language=language
         )
