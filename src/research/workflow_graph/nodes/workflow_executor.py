@@ -35,7 +35,9 @@ class WorkflowExecutor:
         )
         if push_result.status != "success":
             log("error", "コミットorプッシュに失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to push changes"}
         # コミットSHAの取得
         commit_sha = push_result.commit_sha
 
@@ -51,7 +53,9 @@ class WorkflowExecutor:
                 #)
             else:
                 log("error", "生成されたワークフローが存在しないためプログラムを終了します")
-                return {"finish_is": True}
+                return {
+                    "finish_is": True,
+                    "final_status": "no generated workflow to execute"}
 
             # if workflow_execute_result.status != "success":
             #     log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
@@ -65,7 +69,9 @@ class WorkflowExecutor:
             if get_workflow_log_result.status != "completed":
                 log("error", "ワークフローのログの取得に失敗したのでプログラムを終了します")
                 log("error", f"詳細: {get_workflow_log_result}")
-                return {"finish_is": True}
+                return {
+                    "finish_is": True,
+                    "final_status": "failed to get workflow logs"}
             
             parser_result = parser.workflow_log_parse(get_workflow_log_result)
         
@@ -101,6 +107,7 @@ class WorkflowExecutor:
                 chain = prompt | model
                 category_result = chain.invoke(input)
                 log("info", f"LLM {state.model_name}を利用し、ワークフロー実行失敗の原因を{category_result.category}として分類しました。その理由: {category_result.reason}")
+                
             result = WorkflowRunResult(
                 status=get_workflow_log_result.conclusion,
                 raw_error=get_workflow_log_result.failure_reason,
@@ -119,8 +126,16 @@ class WorkflowExecutor:
         elapsed = time.time() - start_time
         log("info", f"WorkflowExecutor実行時間: {elapsed:.2f}秒")
         
+        if result.failure_category:
+            if result.failure_category.category == "project_error":
+                final_status = "project_error"
+            elif result.failure_category.category == "yml_error":
+                final_status = "yml_error"
+        else:
+            final_status = "success"
         return {
             "workflow_run_results": [result],
             "prev_node": "workflow_executor",
-            "node_history": ["workflow_executor"]
+            "node_history": ["workflow_executor"],
+            "final_status": final_status
         }

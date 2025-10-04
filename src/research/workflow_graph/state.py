@@ -108,6 +108,7 @@ class WorkflowState(BaseModel):
     ワークフローの進行状況や各ノード間で共有する情報を保持するPydanticモデル。
     必要に応じて属性を追加・修正してください。
     """
+    final_status: str | None = Field(None, description="最終的なワークフローの状態")
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
     
     messages: Annotated[list[BaseMessage], operator.add] = Field(

@@ -32,14 +32,20 @@ class GitHubRepoParser:
         repo_info_result = github.get_repository_info(state.repo_url)
         if repo_info_result.status != "success":
             log("error", "リポジトリ情報の取得に失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to get repo info"
+                }
         repo_info = repo_info_result.info
 
         # リポジトリのクローン
         clone_result = github.clone_repository(state.repo_url)
         if clone_result.status != "success":
             log("error", "リポジトリのクローンに失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to clone repo"
+            }
         local_path = clone_result.local_path
         
         # ブランチの作成
@@ -49,7 +55,10 @@ class GitHubRepoParser:
             )
         if create_branch_result.status != "success":
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to create branch"
+            }
 
         #.githubフォルダの削除
         delete_github_folder_result = github.delete_folder(
@@ -63,7 +72,10 @@ class GitHubRepoParser:
         file_tree_result = github.get_file_tree(local_path)
         if file_tree_result.status != "success":
             log("error", "ファイルツリーの取得に失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to get file tree"
+            }
         file_tree = file_tree_result.info
 
         if state.generate_workflow_required_files:

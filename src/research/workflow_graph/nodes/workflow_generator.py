@@ -48,7 +48,10 @@ class WorkflowGenerator:
 
         if finish_is:
             log("info", "Workflow Generatorでfinish_isがTrueになったのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to generate workflow"
+                }
         
         github = GitHubTool()
         # ymlファイルの内容生成後、ブランチの作成、ファイルの作成、書き込みを行う
@@ -60,7 +63,9 @@ class WorkflowGenerator:
         )
         if create_file_result.status != "success":
             log("error", "YAMLファイルの作成に失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to create workflow file"}
         
         write_to_file_result = github.write_to_file(
             local_path=state.local_path,
@@ -69,7 +74,10 @@ class WorkflowGenerator:
         )
         if write_to_file_result.status != "success":
             log("error", "YAMLファイルへの書き込みに失敗したのでプログラムを終了します")
-            return {"finish_is": True}
+            return {
+                "finish_is": True,
+                "final_status": "failed to write workflow file"
+            }
 
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
