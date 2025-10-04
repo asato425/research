@@ -138,7 +138,6 @@ class WorkflowState(BaseModel):
     
     loop_count: int = Field(0, description="ワークフローのループ回数")
     loop_count_max: int = Field(..., description="ワークフローのループ回数の上限")
-    lint_loop_count_max: int = Field(..., description="生成とLintのループ回数の上限")
     max_required_files: int = Field(..., description="ワークフロー生成に必要な主要ファイルの最大数")
     best_practice_num: int = Field(..., description="言語固有のベストプラクティスの数")
     
