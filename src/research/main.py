@@ -110,7 +110,6 @@ def main():
         max_required_files=args.max_required_files,
         loop_count_max=args.loop_count_max,
         best_practice_num=args.best_practice_num,
-        config={"recursion_limit": 50}
     )
 
     # 最終的な出力を表示
