@@ -83,7 +83,7 @@ class WorkflowBuilder:
         workflow.add_edge("explanation_generator", "END")
         
         workflow.add_edge("END", END)
-
+        workflow.config_schema = {"recursion_limit": 100}
 
         # グラフのコンパイル
         return workflow.compile()
@@ -159,7 +159,7 @@ class WorkflowBuilder:
             model_name: str = "gemini",
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
-            lint_loop_count_max: int = 3, best_practice_num: int = 10) -> WorkflowState:
+            best_practice_num: int = 10) -> WorkflowState:
 
         """ワークフローの実行を開始するメソッド
         Inputs:
