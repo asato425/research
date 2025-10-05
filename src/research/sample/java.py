@@ -23,11 +23,10 @@ MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-m
 MODEL_NAME = "gemini-2.5-flash"
 
 # コマンドライン引数のデフォルト値
-WORK_REF = "work_testtest"  # 作業用ブランチ名
+WORK_REF = "work_test"  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
-MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
-LOOP_COUNT_MAX = 5 # ワークフローのループ回数の上限
-LINT_LOOP_COUNT_MAX = 3 # Lintのループ回数の上限
+MAX_REQUIRED_FILES = 10 # ワークフロー生成に必要な主要ファイルの最大数
+LOOP_COUNT_MAX = 10 # ワークフローのループ回数の上限
 BEST_PRACTICE_NUM = 10 # 言語固有のベストプラクティスの数
 
 # ログ出力の設定、TrueかFalseを指定できます
@@ -74,13 +73,6 @@ def main():
         default=LOOP_COUNT_MAX,
         help="ワークフローのループ回数の上限を設定してください（デフォルト:5）",
     )
-    # "lint_loop_count_max"引数を追加
-    parser.add_argument(
-        "--lint_loop_count_max",
-        type=int,
-        default=LINT_LOOP_COUNT_MAX,
-        help="生成とLintのループ回数の上限を設定してください（デフォルト:3）",
-    )
     # "best_practice_num"引数を追加、現在はコスト削減のためPython,Javaのベストプラクティスは使い回しており、引数で変更できません
     parser.add_argument(
         "--best_practice_num",
@@ -117,7 +109,6 @@ def main():
         yml_file_name=args.yml_file_name,
         max_required_files=args.max_required_files,
         loop_count_max=args.loop_count_max,
-        lint_loop_count_max=args.lint_loop_count_max,
         best_practice_num=args.best_practice_num
     )
 
