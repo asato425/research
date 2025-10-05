@@ -21,7 +21,7 @@ class RequiredFile(BaseModel):
             f"ファイル名: {self.name}",
             f"説明: {self.description}",
             f"パス: {self.path}",
-            f"内容: {'あり' if self.content else 'なし'}"
+            f"内容: {self.content if self.content else 'なし'}"
         ]
         return "\n".join(lines)
     
