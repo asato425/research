@@ -83,7 +83,6 @@ class WorkflowBuilder:
         workflow.add_edge("explanation_generator", "END")
         
         workflow.add_edge("END", END)
-        workflow.config_schema = {"recursion_limit": 100}
 
         # グラフのコンパイル
         return workflow.compile()
@@ -215,7 +214,9 @@ class WorkflowBuilder:
         # 開始時間の記録
         start_time = time.time()
         # グラフの実行
-        final_state = self.graph.invoke(initial_state)
+        final_state = self.graph.invoke(initial_state, config={
+                          "recursion_limit": 100,
+                      })
 
         # 終了時間の記録
         end_time = time.time()
