@@ -65,7 +65,7 @@ class LintResult(BaseModel):
     status: str = Field(..., description="Lint結果の状態")
     lint_name: Optional[str] = Field(None, description="使用したLinterの名前（例: actionlint, ghalint）")
     raw_error: Any = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
-    parsed_error: Optional[str] = Field(None, description="LLM等で要約したLintエラー")
+    parsed_error: Any = Field(None, description="LLM等で要約したLintエラー")
 
     def summary(self) -> str:
         return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
