@@ -122,7 +122,7 @@ class WorkflowGenerator:
                     "- リポジトリの情報:\n"
                     f"{state.repo_info}\n"
                     "【YAML記述ルール】\n"
-                    f"{get_yml_rules()}\n"
+                    f"{get_yml_rules(state.work_ref)}\n"
                     f"【{state.language}向けベストプラクティス】\n"
                     f"{best_practices}"
         )
