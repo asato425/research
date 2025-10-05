@@ -34,8 +34,11 @@ class ParserTool:
         status = workflow_result.status
         conclusion = workflow_result.conclusion
         message = workflow_result.message
-        failure_reason = self.extract_error_context(workflow_result.failure_reason) if workflow_result.failure_reason else None
-
+        failure_reason = None
+        if workflow_result.failure_reason:
+            failure_reason = self.extract_error_context(workflow_result.failure_reason)
+            result = len(failure_reason)/len(workflow_result.failure_reason) * 100
+            log("info", f"実行ログの削減できた割合: {100-int(result)}%")
         parse_details = None
 
         if conclusion is None:
