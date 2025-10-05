@@ -127,10 +127,7 @@ class WorkflowExecutor:
                 failure_category=None
             )
         if result.failure_category:
-            if result.failure_category.category == "project_error":
-                final_status = "project_error"
-            elif result.failure_category.category == "yml_error":
-                final_status = "yml_error"
+            final_status = result.failure_category.category
         else:
             final_status = "success"
         
