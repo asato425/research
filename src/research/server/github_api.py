@@ -168,8 +168,8 @@ def get_latest_workflow_logs(req: WorkflowRequest):
         poll_count = 0
         found = False
         run = None
-        # 最大60回(=最大5分)までポーリング
-        while poll_count < 60:
+        # 最大120回(=最大10分)までポーリング
+        while poll_count < 120:
             resp = requests.get(url, headers=headers)
             data = resp.json()
             logging.info("------------------------------------------")
