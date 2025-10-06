@@ -66,9 +66,26 @@ class WorkflowExecutor:
                 repo_url=state.repo_url,
                 commit_sha=commit_sha
             )
+            # ワークフローの完了を最大20分(5分*4回(最初の1回+繰り返しの3回))まで待機
+            limit = 0
+            while get_workflow_log_result.status == "in_progress" and limit <= 3:
+                log("warning", "ワークフローの実行中のため、ログの取得を10秒後に再試行します")
+                time.sleep(10)
+                get_workflow_log_result = github.get_latest_workflow_logs(
+                    repo_url=state.repo_url,
+                    commit_sha=commit_sha
+                )
+                limit += 1
+                
             if get_workflow_log_result.status != "completed":
                 log("error", "ワークフローのログの取得に失敗したのでプログラムを終了します")
                 log("error", f"詳細: {get_workflow_log_result}")
+                result = WorkflowRunResult(
+                status=get_workflow_log_result.status,
+                raw_error=None,
+                parsed_error=None,
+                failure_category=None
+            )
                 return {
                     "finish_is": True,
                     "final_status": "failed to get workflow logs"}
