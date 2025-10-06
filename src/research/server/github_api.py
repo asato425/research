@@ -3,7 +3,6 @@ FastAPIを用いたGitHub操作APIのサーバー側実装例。
 export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxをターミナルで実行しておく必要があります
 """
 import time
-import logging
 import requests
 import os
 from fastapi import FastAPI
@@ -168,12 +167,10 @@ def get_latest_workflow_logs(req: WorkflowRequest):
         poll_count = 0
         found = False
         run = None
-        # 最大120回(=最大10分)までポーリング
-        while poll_count < 120:
+        # 最大60回(=最大5分)までポーリング
+        while poll_count < 60:
             resp = requests.get(url, headers=headers)
             data = resp.json()
-            logging.info("------------------------------------------")
-            logging.info({"poll_count": poll_count})
             if "workflow_runs" not in data or not data["workflow_runs"]:
                 time.sleep(5)
                 poll_count += 1
@@ -206,8 +203,6 @@ def get_latest_workflow_logs(req: WorkflowRequest):
                 poll_count += 1
         if not run:
             return WorkflowResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
-        logging.info("------------------------------------------")
-        logging.info("run: %s", run)
         failure_reason = None
         # 失敗時はlogs_urlからログを取得し、そのままfailure_reasonに格納（LLMで抽出するため）
         if run["conclusion"] == "failure" and run.get("logs_url"):
