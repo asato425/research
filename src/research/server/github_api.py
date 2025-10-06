@@ -237,7 +237,7 @@ def get_latest_workflow_logs(req: WorkflowRequest):
                 failure_reason = f"Log parse error: {ex}"
         return WorkflowResponse(
             status=run["status"],
-            message="ワークフロー結果取得成功",
+            message="ワークフロー結果取得成功" if run["status"] == "completed" else "ワークフロー結果が取得できませんでした",
             conclusion=run["conclusion"],
             html_url=run["html_url"],
             logs_url=run["logs_url"],
