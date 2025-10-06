@@ -140,7 +140,7 @@ class ParserTool:
         )
 
     
-    def extract_error_context(self, log: str, context: int = 5) -> str:
+    def extract_error_context(self, log: str, context: int = 3) -> str:
         """
         ログからエラー周辺の行だけを抽出する。
         context: エラー行の前後に残す行数
