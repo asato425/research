@@ -6,6 +6,7 @@ from langchain_core.tools import Tool
 from langchain.tools.retriever import create_retriever_tool
 from langchain.agents import create_openai_functions_agent, AgentExecutor
 from research.log_output.log import log
+import time
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -32,6 +33,7 @@ class LLMTool:
         }
         try:
             log("info", f"LLMモデル '{model_name}' を作成します。")
+            time.sleep(20)
             return models[model_name]()
         except KeyError:
             log("error", f"モデル '{model_name}' はサポートされていません。")
