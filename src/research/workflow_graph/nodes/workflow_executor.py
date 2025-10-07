@@ -26,6 +26,16 @@ class WorkflowExecutor:
         github = GitHubTool()
         parser = ParserTool(model_name=state.model_name)
     
+        # 前のワークフローと全く同じ内容をLLMが生成し、コミットができないことがあるのでその場合は終了する
+        if len(state.generate_workflows) >= 2:
+            if state.generate_workflows[-2].generated_text == state.generate_workflows[-1].generated_text:
+                log("warning", "LLMが前のワークフローと全く同じ内容を生成しており、コミットができないため、プログラムを終了します")
+                return {
+                    "finish_is": True,
+                    "final_status": "cannot commit because the generated workflow is the same as the previous one"
+                }
+            else:
+                log("info", "LLMが前のワークフローと異なる内容を生成しているため、コミットを続行します")
 
         # コミット+プッシュ
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -110,12 +120,13 @@ class WorkflowExecutor:
                     ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
                     ("human",
                         "以下のGitHub Actionsのワークフロー内容と実行ログの要約をもとに、"
-                        "ワークフローの失敗原因を次の3つのいずれかに分類してください。失敗の原因が複数ある場合は、yml_errorとなるものを優先してください。\n"
+                        "ワークフローの失敗原因を次の4つのいずれかに分類してください。失敗の原因が複数ある場合は、yml_errorとなるものを優先してください。\n"
                         "- 'yml_error': YAMLファイルの記述ミスや構文エラー、"
                         "またはワークフローで必要な依存ツールやコマンドがインストールされておらず、"
                         "そのジョブやステップの記述自体が不適切な場合。\n"
                         "- 'project_error': YAML自体は正しいが、テストやビルドなどプロジェクト本体の処理が失敗した場合。"
                         "（例: テストが落ちるなど、YAMLを修正しても解決できない場合）\n"
+                        "- 'parser_error': 実行ログの要約がエラーの原因を説明していない場合。\n"
                         "- 'unknown_error': 上記以外や判別不能な場合。\n\n"
                         "分類は必ず1つだけ選び、分類理由や根拠を日本語で簡潔に説明してください。\n"
                         "特に、コマンドが見つからない／依存ツールが未インストールの場合は 'yml_error' としてください。"
@@ -130,6 +141,10 @@ class WorkflowExecutor:
                 category_result = chain.invoke(input)
                 log("info", f"LLM {state.model_name}を利用し、ワークフロー実行失敗の原因を{category_result.category}として分類しました。その理由: {category_result.reason}")
                 
+                if category_result.category == "parser_error" or category_result.category == "unknown_error":
+                    log("info", f"{category_result.category}に分類されたため、parsed_errorにはparser.filter()の結果を利用します。")
+                    parser_result.parse_details = parser.filter(get_workflow_log_result.failure_reason)
+
             result = WorkflowRunResult(
                 status=get_workflow_log_result.conclusion,
                 raw_error=get_workflow_log_result.failure_reason,
