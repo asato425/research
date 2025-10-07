@@ -141,7 +141,7 @@ class ParserTool:
         #ログをフィルターする関数
         # フィルターした結果1万文字を超えたらcontextを小さくする
         context = 5
-        for _ in range(5):
+        for _ in range(6):
             filtered_log = self.remove_timestamps(self.extract_error_context(log_, context))
             log("info", f"context{context}でのフィルター後のログの文字数: {len(filtered_log)}")
             if len(filtered_log) <= 10000:
