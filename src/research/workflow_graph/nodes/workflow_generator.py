@@ -164,6 +164,7 @@ class WorkflowGenerator:
             content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのワークフロー生成、エラーの内容の履歴も踏まえてください。\n"
                     "- Lintエラーの内容:\n"
                     f"{lint_result.parsed_error}\n"
+                    "注意点：前のワークフローと全く同じ内容は生成しないでください\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
@@ -202,6 +203,7 @@ class WorkflowGenerator:
             content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのワークフロー生成、エラーの内容の履歴も踏まえてください。\n"
                     "- 実行エラーの内容:\n"
                     f"{exec_result.parsed_error}\n"
+                    "注意点：前のワークフローと全く同じ内容は生成しないでください\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
