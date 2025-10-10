@@ -50,7 +50,12 @@ class WorkflowGenerator:
             log("info", "Workflow Generatorでfinish_isがTrueになったのでプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "failed to generate workflow"
+                "final_status": "failed to generate workflow",
+                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
+                "generate_workflows": [result],
+                "prev_node": "workflow_generator",
+                "node_history": ["workflow_generator"],
+                "loop_count": state.loop_count+1
                 }
         
         github = GitHubTool()
@@ -65,8 +70,13 @@ class WorkflowGenerator:
             log("error", "YAMLファイルの作成に失敗したのでプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "failed to create workflow file"}
-        
+                "final_status": "failed to create workflow file",
+                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
+                "generate_workflows": [result],
+                "prev_node": "workflow_generator",
+                "node_history": ["workflow_generator"],
+                "loop_count": state.loop_count+1
+            }
         write_to_file_result = github.write_to_file(
             local_path=state.local_path,
             relative_path=f".github/workflows/{state.yml_file_name}",
@@ -76,7 +86,12 @@ class WorkflowGenerator:
             log("error", "YAMLファイルへの書き込みに失敗したのでプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "failed to write workflow file"
+                "final_status": "failed to write workflow file",
+                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
+                "generate_workflows": [result],
+                "prev_node": "workflow_generator",
+                "node_history": ["workflow_generator"],
+                "loop_count": state.loop_count+1
             }
 
         # 終了時間の記録とログ出力
@@ -188,8 +203,8 @@ class WorkflowGenerator:
             log("info", "workflow_run_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
         
-        if exec_result.failure_category.category in ["project_error", "unknown_error"]:
-            log("error", "workflow_run_result.statusがproject_errorまたはunknown_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
+        if exec_result.parsed_error.yml_errors is None:
+            log("error", "workflow_run_result.parsed_error.yml_errorsがNoneでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
 
         llm = LLMTool()
@@ -202,7 +217,7 @@ class WorkflowGenerator:
         human_prompt = HumanMessage(
             content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。これまでのワークフロー生成、エラーの内容の履歴も踏まえてください。\n"
                     "- 実行エラーの内容:\n"
-                    f"{exec_result.parsed_error}\n"
+                    f"{exec_result.parsed_error.yml_errors}\n"
                     "注意点：前のワークフローと全く同じ内容は生成しないでください\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
