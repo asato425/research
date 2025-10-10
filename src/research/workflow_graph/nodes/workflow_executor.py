@@ -1,10 +1,8 @@
 # executor.py
 from research.tools.github import GitHubTool
-from research.tools.llm import LLMTool
 from research.tools.parser import ParserTool
-from research.workflow_graph.state import WorkflowState, WorkflowRunResult, WorkflowRunResultCategory
+from research.workflow_graph.state import WorkflowState, WorkflowRunResult, LogParseResult
 from research.log_output.log import log
-from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
 from datetime import datetime
 import time
@@ -91,65 +89,41 @@ class WorkflowExecutor:
                 log("error", "ワークフローのログの取得に失敗したのでプログラムを終了します")
                 log("error", f"詳細: {get_workflow_log_result}")
                 result = WorkflowRunResult(
-                status=get_workflow_log_result.status,
-                raw_error=None,
-                parsed_error=None,
-                failure_category=None
-            )
+                    status=get_workflow_log_result.status,
+                    raw_error=None,
+                    parsed_error=None,
+                )
                 return {
                     "finish_is": True,
-                    "final_status": "failed to get workflow logs"}
-            
+                    "final_status": "failed to get workflow logs"
+                }
+
             parser_result = parser.workflow_log_parse(get_workflow_log_result)
         
-            category_result = None
-            if get_workflow_log_result.conclusion != "success":
-                llm = LLMTool()
-            
-                model = llm.create_model(
-                    model_name=state.model_name,
-                    output_model=WorkflowRunResultCategory
-                )
-            
-                input = {
-                    "workflow_content": state.generate_workflows[-1].generated_text,
-                    "parse_details": parser_result.parse_details,
-                }
-                
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
-                    ("human",
-                        "以下のGitHub Actionsのワークフロー内容と実行ログの要約をもとに、"
-                        "ワークフローの失敗原因を次の4つのいずれかに分類してください。失敗の原因が複数ある場合は、yml_errorとなるものを優先してください。\n"
-                        "- 'yml_error': YAMLファイルの記述ミスや構文エラー、"
-                        "またはワークフローで必要な依存ツールやコマンドがインストールされておらず、"
-                        "そのジョブやステップの記述自体が不適切な場合。\n"
-                        "- 'project_error': YAML自体は正しいが、テストやビルドなどプロジェクト本体の処理が失敗した場合。"
-                        "（例: テストが落ちるなど、YAMLを修正しても解決できない場合）\n"
-                        "- 'parser_error': 実行ログの要約がエラーの原因を説明していない場合。\n"
-                        "- 'unknown_error': 上記以外や判別不能な場合。\n\n"
-                        "分類は必ず1つだけ選び、分類理由や根拠を日本語で簡潔に説明してください。\n"
-                        "特に、コマンドが見つからない／依存ツールが未インストールの場合は 'yml_error' としてください。"
-                        "Lint失敗のエラー(continue-on-error: trueを記述しているステップやジョブでのエラー)は無視してください。\n"
-                        "【ワークフローの内容】\n"
-                        "{workflow_content}\n"
-                        "【実行ログの要約】\n"
-                        "{parse_details}\n"
-                    )
-                ])
-                chain = prompt | model
-                category_result = chain.invoke(input)
-                log("info", f"LLM {state.model_name}を利用し、ワークフロー実行失敗の原因を{category_result.category}として分類しました。その理由: {category_result.reason}")
-                
-                if category_result.category == "parser_error" or category_result.category == "unknown_error":
-                    log("info", f"{category_result.category}に分類されたため、parsed_errorにはparser.filter()の結果を利用します。")
-                    parser_result.parse_details = parser.filter(get_workflow_log_result.failure_reason)
-
+            if parser_result.yml_errors is not None:
+                log("info", "yml_errorsに分類されたため、修正します")
+                final_status = "yml_errors"
+            elif parser_result.project_errors is not None:
+                log("info", "project_errorsに分類されたため、修正しません")
+                final_status = "project_errors"
+            elif parser_result.linter_errors is not None:
+                log("info", "linter_errorsに分類されたため、修正しません")
+                final_status = "linter_errors"
+            elif parser_result.unknown_errors is not None:
+                log("info", "unknown_errorsに分類されたため、修正しません")
+                final_status = "unknown_errors"
+            else:
+                log("info", "エラーが検出されなかったため、成功とみなします")
+                final_status = "success"
             result = WorkflowRunResult(
                 status=get_workflow_log_result.conclusion,
                 raw_error=get_workflow_log_result.failure_reason,
-                parsed_error=parser_result.parse_details,
-                failure_category=category_result
+                parsed_error=LogParseResult(
+                    yml_errors=parser_result.yml_errors,
+                    project_errors=parser_result.project_errors,
+                    linter_errors=parser_result.linter_errors,
+                    unknown_errors=parser_result.unknown_errors
+                )
             )
         else:
             log("info", "Workflow Executorはスキップされました")
@@ -157,12 +131,7 @@ class WorkflowExecutor:
                 status="success",
                 raw_error=None,
                 parsed_error=None,
-                failure_category=None
             )
-        if result.failure_category:
-            final_status = result.failure_category.category
-        else:
-            final_status = "success"
         
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
