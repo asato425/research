@@ -88,8 +88,9 @@ def main(language: str, best_practice_num: int = 10):
 # 実行方法:
 # poetry run python src/research/prompts/yml_best_practices.py
 if __name__ == "__main__":
-    language = "C"
-    result = main(language, 10)
-    # ファイルに保存
-    with open(f'src/research/best_practices/{language.lower()}.md', 'w', encoding='utf-8') as f:
-        f.write(result)
+    language = ["C#", "Go", "Ruby"]
+    for language in language:
+        result = main(language, 10)
+        # ファイルに保存
+        with open(f'src/research/best_practices/{language.lower()}.md', 'w', encoding='utf-8') as f:
+            f.write(result)
