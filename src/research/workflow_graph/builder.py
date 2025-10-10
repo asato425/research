@@ -121,15 +121,20 @@ class WorkflowBuilder:
             return True
 
         # 最新のワークフロー実行結果がsuccessならTrue
-        if state.workflow_run_results[-1].status == "success":
+        if state.final_status == "success":
             log("info", "グラフの分岐：ワークフローは成功したので修正は不要です")
             return True 
-        
-        if state.workflow_run_results[-1].failure_category.category == "project_error":
-            log("warning", "グラフの分岐：ワークフローの実行は失敗したが、プロジェクト側の問題なのでワークフローの修正はできないため進みます")
+        if state.workflow_run_results[-1].status == "success":
+            log("info", "グラフの分岐：ワークフローの実行は成功したので修正は不要です")
             return True
-
-        if state.workflow_run_results[-1].failure_category.category == "unknown_error":
+        
+        if state.final_status == "project_errors":
+            log("info", "グラフの分岐：ワークフローの実行は失敗したが、プロジェクト側の問題なのでワークフローの修正はできないため進みます")
+            return True
+        if state.final_status == "linter_errors":
+            log("info", "グラフの分岐：ワークフローの実行は失敗したが、Linter自体の実行に失敗しており、ワークフローの修正はできないため進みます")
+            return True
+        if state.final_status == "unknown_errors":
             log("warning", "グラフの分岐：ワークフローの実行は失敗したが、原因が特定できず、ワークフローの修正はできないため進みます")
             return True
         
