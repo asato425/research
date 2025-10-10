@@ -21,7 +21,7 @@ GENERATE_BEST_PRACTICES = True
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"claude"を指定できます。
 """
 MODEL_NAME = "gemini-2.5-flash"
-REPO_URL = "https://github.com/asato425/test_java"
+REPO_URL = "https://github.com/asato425/tesseract.js"
 # コマンドライン引数のデフォルト値
 WORK_REF = "work_test"  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
@@ -117,6 +117,6 @@ def main():
     
 
 # 実行方法:
-# poetry run python src/research/sample/java.py
+# poetry run python src/research/sample/sample.py
 if __name__ == "__main__":
     main()
