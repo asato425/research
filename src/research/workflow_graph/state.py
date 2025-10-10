@@ -73,19 +73,16 @@ class LintResult(BaseModel):
     def __repr__(self):
         return f"LintResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}}}"
 
-class WorkflowRunResultCategory(BaseModel):
-    """
-    ワークフロー実行失敗のカテゴリを表すPydanticモデル。
-    'yml_error' または 'project_error' のいずれかを保持する。
-    """
-    category: Optional[str] = Field(None, description="ワークフロー実行失敗のカテゴリ（'yml_error' または 'project_error' または 'unknown_error'）")
-    reason: Optional[str] = Field(None, description="そのカテゴリに分類した理由や説明")
-    
+class LogParseResult(BaseModel):
+    linter_errors: str | None = Field(None, description="Linterによるエラーの説明、ない場合はNoneとしてください")
+    yml_errors: str | None = Field(None, description="ymlファイルの変更で解消できるエラーの説明、ない場合はNoneとしてください")
+    project_errors: str | None = Field(None, description="その他プロジェクト固有のエラーの説明、ない場合はNoneとしてください")
+    unknown_errors: str | None = Field(None, description="不明なエラーの説明、ない場合はNoneとしてください")
     def summary(self) -> str:
-        return f"カテゴリ: {self.category or 'なし'}\n理由: {self.reason or 'なし'}"
+        return f"Linterエラー: {self.linter_errors or 'なし'}\nYMLエラー: {self.yml_errors or 'なし'}\nプロジェクトエラー: {self.project_errors or 'なし'}\n不明なエラー: {self.unknown_errors or 'なし'}"
 
     def __repr__(self):
-        return f"WorkflowRunResultCategory={{category={self.category}, reason={self.reason}}}"
+        return f"LogParseResult={{linter_errors={self.linter_errors}, yml_errors={self.yml_errors}, project_errors={self.project_errors}, unknown_errors={self.unknown_errors}}}"
 class WorkflowRunResult(BaseModel):
     """
     ワークフローの実行結果を表すPydanticモデル。
@@ -93,16 +90,14 @@ class WorkflowRunResult(BaseModel):
     """
     status: str = Field(..., description="ワークフロー実行結果の状態")
     raw_error: Optional[str] = Field(None, description="ワークフロー実行エラーの原文（ツール出力そのまま）")
-    parsed_error: Optional[str] = Field(None, description="LLM等で要約したワークフロー実行エラー")
-    failure_category: WorkflowRunResultCategory | None = Field(None, description="ワークフロー実行失敗のカテゴリとその理由")
-    
+    parsed_error: LogParseResult | None = Field(None, description="ワークフロー実行ログをエラーの種類で分類した結果")
+
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略\n{self.failure_category.summary() if self.failure_category else '失敗カテゴリ: なし'}"
+        return f"ステータス: {self.status}\n原文: 省略\n要約: 省略\n{self.parsed_error.summary() if self.parsed_error else '失敗カテゴリ: なし'}"
 
     def __repr__(self):
-        return f"WorkflowRunResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}, failure_category={self.failure_category.__repr__()}}}"
+        return f"WorkflowRunResult={{status={self.status}, raw_error={self.raw_error}, parsed_error={self.parsed_error}}}"
 
-        
 class WorkflowState(BaseModel):
     """
     ワークフローの進行状況や各ノード間で共有する情報を保持するPydanticモデル。
