@@ -74,14 +74,14 @@ def get_root_folder_count(repo_full_name: str):
         return None
 
 def main():
-    languages = ["Python", "Java", "JavaScript", "C"]
+    languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
     #languages = ["Python"]  # テスト用に1言語に絞る
-    star_threshold = 1000
+    star_threshold = 10000
     pushed_after = "2024-10-01"
-    main_lang_threshold = 0.8
-    max_file_count = 200          # 最大ファイル数
-    max_root_folder_count = 30     # 最大ルートフォルダ数
-    repo_num = 10                  # 各言語ごとに取得したいリポジトリ数
+    main_lang_threshold = 0.9
+    max_file_count = 1000          # 最大ファイル数
+    max_root_folder_count = 50     # 最大ルートフォルダ数
+    repo_num = 20                  # 各言語ごとに取得したいリポジトリ数
     repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
@@ -132,8 +132,7 @@ def main():
                 if result.status == "success":
                     f.write(f'{i}: "{result.fork_url}",\n')
                 else:
-                    print(f"{i}: フォークに失敗したので終了します(url: {repo_url})")
-                    return # フォークに失敗したらそこで終了
+                    print(f"{i}: フォークに失敗しました(url: {repo_url})")
             f.write("\n")
        
     print(f"\n=== リポジトリのコピー用リポジトリURLリストを {filename} に保存しました ===")
