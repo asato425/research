@@ -9,27 +9,32 @@ import re
 class ParseResult(BaseModel):
     parse_details: str | None = Field(None, description="パースの詳細")
 
-
+class LogParseResult(BaseModel):
+    linter_errors: str | None = Field(None, description="Linterによるエラーの説明、ない場合はNoneとしてください")
+    yml_errors: str | None = Field(None, description="ymlファイルの変更で解消できるエラーの説明、ない場合はNoneとしてください")
+    project_errors: str | None = Field(None, description="その他プロジェクト固有のエラーの説明、ない場合はNoneとしてください")
+    unknown_errors: str | None = Field(None, description="不明なエラーの説明、ない場合はNoneとしてください")
 class ParserTool:
     def __init__(self, model_name: str = "gemini"):
         """
         Returns:
             None
         """
-        self.llm = LLMTool().create_model(
-            model_name=model_name, 
-            output_model=ParseResult
-        )
+        self.model_name = model_name
 
     def workflow_log_parse(self, workflow_result: WorkflowResult) -> ParseResult:
 
         """
-		WorkflowResult型の変数をLLMプロンプト用に整形し、
-		エラー内容をわかりやすく辞書形式で返す。
-
-		Returns:
-			ParseResult: parse_details(str|None)
+        WorkflowResult型の変数をLLMプロンプト用に整形し、
+        エラー内容を種類別の辞書形式で返す。
+        Returns:
+            LogParseResult: linter_errors(str|None), yml_errors(str|None), project_errors(str|None), unknown_errors(str|None)
 		"""
+  
+        llm = LLMTool().create_model(
+            model_name=self.model_name, 
+            output_model=LogParseResult
+        )
 		
         status = workflow_result.status
         conclusion = workflow_result.conclusion
@@ -53,18 +58,16 @@ class ParserTool:
                     ),
                     (
                         "human",
-                        "以下のGitHub Actionsのワークフロー実行結果に基づいてエラーの詳細をわかりやすく教えてください。\n"
+                        "以下のGitHub Actionsのワークフロー実行結果に基づいてエラーの詳細をエラーの種類に応じて分けて教えてください。\n"
+                        "プロジェクトとymlファイルのどちらでも改善できる可能性のエラーに関してはymlファイルの変更で解消できるエラーとしてください"
                         "ワークフローの実行状態: {status}\n"
                         "ワークフローの実行結果: {conclusion}\n"
                         "ワークフロー実行結果の内容: {message}\n"
                         "ワークフロー実行の失敗理由: {failure_reason}\n"
-                        "注意事項:\n"
-                        "- プロジェクト内のファイルは変更せず、ymlファイルのみの修正でエラーの解決を図ってください。\n"
-                        
                     )
                 ]
             )
-            chain = prompt | self.llm
+            chain = prompt | llm
             result = chain.invoke(
                 {
                     "status": status,
@@ -73,12 +76,28 @@ class ParserTool:
                     "failure_reason": failure_reason,
                 }
             )
-            log(conclusion, f"ワークフロー実行ログパーサー結果: {result.parse_details}")
+            if result is None:
+                log("error", "ParserTool.workflow_log_parse: LLMの応答がNoneでした")
+                return LogParseResult(
+                    linter_errors=None,
+                    yml_errors=None,
+                    project_errors=None,
+                    unknown_errors="LLMの応答がNoneだったため、ログの内容が解析できませんでした"
+                )
+            log(conclusion, 
+                "ワークフロー実行ログパーサー結果: \n"
+                f"Linter_error:{result.linter_errors if result.linter_errors else 'No Linter Errors'}\n"
+                f"yml_error:{result.yml_errors if result.yml_errors else 'No YML Errors'}\n"
+                f"project_error:{result.project_errors if result.project_errors else 'No Project Errors'}\n"
+                f"unknown_error:{result.unknown_errors if result.unknown_errors else 'No Unknown Errors'}\n"
+            )
             return result
-        
-        log(conclusion, f"ワークフロー実行ログパーサー結果: {parse_details or 'No parse details'}")
-        return ParseResult(
-            parse_details=parse_details
+        log("info", f"ワークフローパーサー結果: {parse_details or 'No parse details'}")
+        return LogParseResult(
+            linter_errors=None,
+            yml_errors=None,
+            project_errors=None,
+            unknown_errors=None
         )
 
     def lint_result_parse(self, lint_result: LintResult) -> ParseResult:
@@ -90,6 +109,12 @@ class ParserTool:
         Returns:
             LintParseResult: error_details(str|None)
         """
+        
+        llm = LLMTool().create_model(
+            model_name=self.model_name, 
+            output_model=ParseResult
+        )
+        
         local_path = lint_result.local_path
         status = lint_result.status
         error_message = lint_result.error_message
@@ -122,7 +147,7 @@ class ParserTool:
                 ]
             )
 
-            chain = llm_prompt | self.llm
+            chain = llm_prompt | llm
             result = chain.invoke({
                 "local_path": local_path,
                 "status": status,
@@ -131,10 +156,9 @@ class ParserTool:
             })
             log("info", f"Lintパーサー結果: {result.parse_details}")
             return result
-
         log("info", f"Lintパーサー結果: {parse_details or 'No parse details'}")
         return ParseResult(
-            parse_details=parse_details,
+            parse_details=parse_details
         )
 
     def filter(self, log_:str):
@@ -147,14 +171,14 @@ class ParserTool:
             if len(filtered_log) <= 10000:
                 break
             context -= 1
-        
-        if len(filtered_log) >= 10000:
-            log("warning", "フィルター後のログが1万文字を超えています")
-        
+        log("info", f"フィルター前のログの文字数: {len(log_)}")
         log("info", f"フィルター後のログの文字数: {len(filtered_log)}")
         result = len(filtered_log)/len(log_) * 100
         log("info", f"実行ログの削減できた割合: {100-int(result)}%")
-        
+        if len(filtered_log) >= 10000:
+            log("warning", "フィルター後のログが1万文字を超えているため、最初の1万文字に限定します")
+            filtered_log = filtered_log[:10000]
+
         return filtered_log
     
     def extract_error_context(self, log: str, context: int = 3) -> str:
