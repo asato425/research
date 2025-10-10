@@ -1,6 +1,8 @@
 
 import logging
 import sys
+import os
+from datetime import datetime
 
 class ColorFormatter(logging.Formatter):
     COLOR_MAP = {
@@ -63,3 +65,10 @@ def log(status: str, message: str) -> None:
         logger.warning(message)
     else:
         logger.error(message)
+    
+    # ログの詳細をファイルに保存
+    output_dir = "src/research/evaluation/details/logs"
+    detail_path = os.path.join(output_dir, f"log_{datetime.now().strftime('%m%d')}.txt")
+    os.makedirs(output_dir, exist_ok=True)
+    with open(detail_path, "a", encoding="utf-8") as f:
+        f.write(f"{status}:{message}\n")
