@@ -183,7 +183,7 @@ def get_latest_workflow_logs(req: WorkflowRequest):
                     break
             if found:
                 # 進行中なら完了まで待機
-                while run["status"] in ("in_progress", "queued") and poll_count < 60:
+                while run["status"] in ("in_progress", "queued", "pending") and poll_count < 60:
                     time.sleep(5)
                     resp = requests.get(url, headers=headers)
                     data = resp.json()
