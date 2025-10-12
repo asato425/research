@@ -144,11 +144,15 @@ class WorkflowGenerator:
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
-
-        if result.status != "success":
+        
+        if result is None:
+            log("error", "ワークフローの生成結果がNoneなのでプログラムを終了します")
+            finish_is = True
+        elif result.status != "success":
             log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
             finish_is = True
-        log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
+        else:
+            log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
 
         return result, human_prompt, finish_is
 
@@ -160,13 +164,18 @@ class WorkflowGenerator:
         finish_is = False
         # lint_resultをもとにworkflowを修正する処理
         lint_result = state.lint_results[-1]
-        if lint_result.status == "success":
+        if lint_result is None:
+            log("error", "lint_resultがNoneでWorkflowGeneratorに修正しに来ているため、プログラムを終了します")
+            finish_is = True
+            return None, None, finish_is
+        elif lint_result.status == "success":
             log("info", "lint_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-        
-        if lint_result.status == "linter_error":
+            return None, None, finish_is
+        elif lint_result.status == "linter_error":
             log("error", "lint_result.statusがlinter_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
+            return None, None, finish_is
 
         llm = LLMTool()
         
@@ -185,10 +194,14 @@ class WorkflowGenerator:
         chain = prompt | model
         result = chain.invoke({})
 
-        if result.status != "success":
+        if result is None:
+            log("error", "ワークフローのLintエラー修正結果がNoneなのでプログラムを終了します")
+            finish_is = True
+        elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             finish_is = True
-        log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
+        else:
+            log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
         return result, human_prompt, finish_is
 
     def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
@@ -199,13 +212,18 @@ class WorkflowGenerator:
         finish_is = False
         # exec_resultをもとにworkflowを修正する処理
         exec_result = state.workflow_run_results[-1]
-        if exec_result.status == "success":
+        if exec_result is None:
+            log("error", "exec_resultがNoneでWorkflowGeneratorに修正しに来ているため、プログラムを終了します")
+            finish_is = True
+            return None, None, finish_is
+        elif exec_result.status == "success":
             log("info", "workflow_run_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-        
-        if exec_result.parsed_error.yml_errors is None:
+            return None, None, finish_is
+        elif exec_result.parsed_error.yml_errors is None:
             log("error", "workflow_run_result.parsed_error.yml_errorsがNoneでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
+            return None, None, finish_is
 
         llm = LLMTool()
         
@@ -223,10 +241,13 @@ class WorkflowGenerator:
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
-
-        if result.status != "success":
+        if result is None:
+            log("error", "ワークフローの実行エラー修正結果がNoneなのでプログラムを終了します")
+            finish_is = True
+        elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             finish_is = True
-        log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
+        else:
+            log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
         return result, human_prompt, finish_is
 
