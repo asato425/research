@@ -131,6 +131,7 @@ class WorkflowExecutor:
                 raw_error=None,
                 parsed_error=None,
             )
+            final_status = "execution_skipped"
         
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
