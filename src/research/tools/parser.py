@@ -4,6 +4,7 @@ from research.log_output.log import log
 from research.tools.llm import LLMTool
 from research.tools.github import WorkflowResult
 from research.tools.linter import LintResult
+from research.workflow_graph.state import RequiredFile
 import re
 
 class ParseResult(BaseModel):
@@ -161,6 +162,62 @@ class ParserTool:
             parse_details=parse_details
         )
 
+    def file_content_parse(self, file: RequiredFile) -> ParseResult:
+
+        """
+        ファイルの内容をLLMプロンプト用に整形し、
+        内容の説明をわかりやすく辞書形式で返す。
+
+        Returns:
+            ParseResult: parse_details(str|None)
+        """
+        
+        llm = LLMTool().create_model(
+            model_name=self.model_name, 
+            output_model=ParseResult
+        )
+        
+        parse_details = None
+
+        if file is None or file.content is None:
+            parse_details = None
+        else:
+            log("info", f"{file.name}の内容をパースします。内容の文字数: {len(file.content)}")
+            llm_prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        "あなたは日本のソフトウェア開発の専門家です。"
+                    ),
+                    (
+                        "human",
+                        "以下のファイル内容から、GitHub Actionsワークフロー生成に本当に必要な情報のみを抽出してください。"
+                        "不要な説明やコードは省き、必要な情報（例: ビルドコマンド、テストコマンド、依存関係、主要な環境変数など）を簡潔にまとめてください。"
+                        "出力は箇条書きで、要点のみ記載してください。"
+                        "file_content: {file_content}\n"
+                    )
+                ]
+            )
+
+            chain = llm_prompt | llm
+            result = chain.invoke({
+                "file_content": file.content
+            })
+            if result is None:
+                log("error", "ParserTool.file_content_parse: LLMの応答がNoneのため、パースする前の内容を出力にします")
+                return ParseResult(
+                    parse_details=file.content
+                )
+            log("success", f"{file.name}のパースに成功しました。 ")
+            log("info", f"パーサー結果の文字数: {len(result.parse_details)}")
+            result_length = len(result.parse_details) if result.parse_details else 0
+            log("info", f"削減できた割合: {100 - (result_length / len(file.content) * 100):.2f}%")
+            return result
+        
+        log("info", f"ファイル内容パーサー結果: {parse_details or 'No parse details'}")
+        return ParseResult(
+            parse_details=parse_details
+        )
     def filter(self, log_:str):
         #ログをフィルターする関数
         # フィルターした結果1万文字を超えたらcontextを小さくする
