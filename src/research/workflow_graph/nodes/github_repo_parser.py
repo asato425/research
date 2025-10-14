@@ -9,6 +9,7 @@ from research.workflow_graph.state import WorkflowState, WorkflowRequiredFiles
 from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
 import time
+from datetime import datetime
 
 class GitHubRepoParser:
     """GitHubリポジトリ情報の取得を担当するクラス"""
@@ -61,12 +62,29 @@ class GitHubRepoParser:
             }
 
         #.githubフォルダの削除
-        delete_github_folder_result = github.delete_folder(
-            local_path=local_path,
-            relative_path=".github"
-        )
-        if delete_github_folder_result.status != "success":
-            pass
+        folder_exists_result = github.folder_exists_in_repo(local_path=local_path, folder_name=".github")
+        if folder_exists_result.status == "success":
+            delete_github_folder_result = github.delete_folder(
+                local_path=local_path,
+                relative_path=".github"
+            )
+            if delete_github_folder_result.status != "success":
+                log("error", ".githubフォルダの削除に失敗したのでプログラムを終了します")
+                return {
+                    "finish_is": True,
+                    "final_status": "failed to delete .github folder"
+                }
+            # コミット+プッシュ
+            time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            push_result = github.commit_and_push(
+                local_path=local_path,
+                message=time_str+"による自動コミット(.githubフォルダの削除)",
+            )
+            if push_result.status != "success":
+                log("error", "コミットorプッシュに失敗したのでプログラムを終了します")
+                return {
+                    "finish_is": True,
+                    "final_status": "failed to push changes"}
 
         # ファイルツリーの取得
         file_tree_result = github.get_file_tree(local_path)

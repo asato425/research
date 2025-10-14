@@ -591,3 +591,24 @@ class GitHubTool:
         result = RepoOpResult(**resp.json())
         log(result.status, result.message)
         return result
+
+    def folder_exists_in_repo(self, local_path: str, folder_name: str) -> RepoOpResult:
+        """
+        指定したローカルリポジトリ内に特定のフォルダが存在するかどうかを判定する関数。
+
+        Args:
+            local_path (str): リポジトリのローカルパス
+            folder_name (str): 存在を調べたいフォルダ名（例: 'src'）
+
+        Returns:
+            bool: フォルダが存在すればTrue、なければFalse
+        """
+        target_path = os.path.join(local_path, folder_name)
+        status = "success" if os.path.exists(target_path) else "error"
+        if os.path.exists(target_path):
+            result = RepoOpResult(status=status, message=f"{target_path}の存在確認をしました")
+        else:
+            result = RepoOpResult(status=status, message=f"{target_path}は存在しません。")
+
+        log(result.status, result.message)
+        return result
