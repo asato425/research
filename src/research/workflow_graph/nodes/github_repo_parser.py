@@ -147,6 +147,7 @@ class GitHubRepoParser:
                         required_file.parse_content = file_content_parse_result.parse_details
                         log("info", f"{required_file.name}の内容のパースに成功しました")
                         count = len(required_file.content) - len(required_file.parse_content)
+                        required_file.reduced_length = count
                         log("info", f"パースによって削減できた文字数: {len(required_file.content) - len(required_file.parse_content)}")
                         if count >= 0:
                             log("info", f"{required_file.name}の内容が{count}文字削減されました")
