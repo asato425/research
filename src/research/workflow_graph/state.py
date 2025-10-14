@@ -132,6 +132,7 @@ class WorkflowState(BaseModel):
     message_file_name: str = Field("messages.txt", description="LLMとの対話履歴メッセージを保存するファイルの名前")
     finish_is: bool = Field(False, description="ワークフローの評価を終了するかどうかのフラグ")
     
+    before_generated_text: Optional[str] = Field(None, description="生成され、コミット済みのテキスト")
     loop_count: int = Field(0, description="ワークフローのループ回数")
     loop_count_max: int = Field(..., description="ワークフローのループ回数の上限")
     max_required_files: int = Field(..., description="ワークフロー生成に必要な主要ファイルの最大数")

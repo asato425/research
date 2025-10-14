@@ -26,8 +26,8 @@ class WorkflowExecutor:
     
         # 前のワークフローと全く同じ内容をLLMが生成し、コミットができないことがあるのでその場合は終了する
         if len(state.generate_workflows) >= 2:
-            if state.generate_workflows[-2].generated_text == state.generate_workflows[-1].generated_text:
-                log("warning", "LLMが前のワークフローと全く同じ内容を生成しており、コミットができないため、プログラムを終了します")
+            if state.before_generated_text == state.generate_workflows[-1].generated_text:
+                log("warning", "LLMが前回コミットしたワークフローと全く同じ内容を生成しており、コミットができないため、プログラムを終了します")
                 return {
                     "finish_is": True,
                     "final_status": "cannot commit because the generated workflow is the same as the previous one"
@@ -142,5 +142,6 @@ class WorkflowExecutor:
             "workflow_run_results": [result],
             "prev_node": "workflow_executor",
             "node_history": ["workflow_executor"],
-            "final_status": final_status
+            "final_status": final_status,
+            "before_generated_text": state.generate_workflows[-1].generated_text if len(state.generate_workflows) > 0 else None,
         }
