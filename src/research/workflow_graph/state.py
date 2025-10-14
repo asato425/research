@@ -15,13 +15,15 @@ class RequiredFile(BaseModel):
     description: str = Field(..., description="ワークフローで必要なファイルの説明")
     path: str = Field(..., description="ワークフローで必要なファイルのパス(プロジェクトのルートからの相対パス)")
     content: str | None = Field(None, description="ワークフローで必要なファイルの内容")
+    parse_content: str | None = Field(None, description="ファイルの内容のワークフロー生成に必要な部分を抽出したもの")
 
     def summary(self) -> str:
         lines = [
             f"ファイル名: {self.name}",
             f"説明: {self.description}",
             f"パス: {self.path}",
-            f"内容: {self.content if self.content else 'なし'}"
+            f"内容: {self.content if self.content else 'なし'}",
+            f"パース内容: {self.parse_content if self.parse_content else 'なし'}"
         ]
         return "\n".join(lines)
     
