@@ -4,7 +4,6 @@ from research.log_output.log import log
 from research.tools.llm import LLMTool
 from research.tools.github import WorkflowResult
 from research.tools.linter import LintResult
-from research.workflow_graph.state import RequiredFile
 import re
 
 class ParseResult(BaseModel):
@@ -162,7 +161,7 @@ class ParserTool:
             parse_details=parse_details
         )
 
-    def file_content_parse(self, file: RequiredFile) -> ParseResult:
+    def file_content_parse(self, file_content: str) -> ParseResult:
 
         """
         ファイルの内容をLLMプロンプト用に整形し、
@@ -179,10 +178,9 @@ class ParserTool:
         
         parse_details = None
 
-        if file is None or file.content is None:
+        if file_content is None or file_content.strip() == "":
             parse_details = None
         else:
-            log("info", f"{file.name}の内容をパースします。内容の文字数: {len(file.content)}")
             llm_prompt = ChatPromptTemplate.from_messages(
                 [
                     (
@@ -201,17 +199,13 @@ class ParserTool:
 
             chain = llm_prompt | llm
             result = chain.invoke({
-                "file_content": file.content
+                "file_content": file_content
             })
             if result is None:
                 log("error", "ParserTool.file_content_parse: LLMの応答がNoneのため、パースする前の内容を出力にします")
                 return ParseResult(
-                    parse_details=file.content
+                    parse_details=file_content
                 )
-            log("success", f"{file.name}のパースに成功しました。 ")
-            log("info", f"パーサー結果の文字数: {len(result.parse_details)}")
-            result_length = len(result.parse_details) if result.parse_details else 0
-            log("info", f"削減できた割合: {100 - (result_length / len(file.content) * 100):.2f}%")
             return result
         
         log("info", f"ファイル内容パーサー結果: {parse_details or 'No parse details'}")
