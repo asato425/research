@@ -16,6 +16,7 @@ class RequiredFile(BaseModel):
     path: str = Field(..., description="ワークフローで必要なファイルのパス(プロジェクトのルートからの相対パス)")
     content: str | None = Field(None, description="ワークフローで必要なファイルの内容")
     parse_content: str | None = Field(None, description="ファイルの内容のワークフロー生成に必要な部分を抽出したもの")
+    reduced_length: int = Field(0, description="パースして削減できた文字数")
 
     def summary(self) -> str:
         lines = [
@@ -51,13 +52,12 @@ class GenerateWorkflow(BaseModel):
     """
     status: str = Field(..., description="ワークフローの生成結果の状態、生成に成功したらsuccess、失敗したらfail")
     generated_text: Optional[str] = Field(None, description="生成されたテキスト")
-    tokens_used: Optional[int] = Field(None, description="使用されたトークン数")
 
     def summary(self) -> str:
-        return f"ステータス: {self.status}\n生成されたテキスト: 省略\n使用されたトークン数: {self.tokens_used}"
+        return f"ステータス: {self.status}\n生成されたテキスト: 省略"
 
     def __repr__(self):
-        return f"GenerateWorkflow={{status={self.status}, generated_text={self.generated_text}, tokens_used={self.tokens_used}}}"
+        return f"GenerateWorkflow={{status={self.status}, generated_text={self.generated_text}}}"
 
 class LintResult(BaseModel):
     """
