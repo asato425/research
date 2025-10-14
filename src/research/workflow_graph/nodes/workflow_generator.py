@@ -126,12 +126,13 @@ class WorkflowGenerator:
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
+        # TODO: ファイル構造が必要かどうかは要検討
         human_prompt = HumanMessage(
             content=f"以下の条件・情報をもとに、{state.language}プロジェクト向けのGitHub Actionsワークフロー（YAML）を生成してください。\n"
                     "【プロジェクト情報】\n"
                     f"- プロジェクトのローカルパス: {state.local_path}\n"
-                    "- ファイル構造（ツリー形式）:\n"
-                    f"{state.file_tree}\n"
+                    # "- ファイル構造（ツリー形式）:\n"
+                    # f"{state.file_tree}\n"
                     "- 主要ファイル:\n"
                     f"{"\n".join([f"ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n" for file in state.workflow_required_files])}\n"
                     "- リポジトリの情報:\n"
@@ -145,7 +146,7 @@ class WorkflowGenerator:
         chain = prompt | model
         result = chain.invoke({})
         
-        if result is None:
+        if result is None or result.generated_text is None:
             log("error", "ワークフローの生成結果がNoneなのでプログラムを終了します")
             finish_is = True
         elif result.status != "success":
