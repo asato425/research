@@ -7,6 +7,7 @@ from research.workflow_graph.state import GenerateWorkflow, WorkflowState
 from research.log_output.log import log
 from research.tools.llm import LLMTool
 from research.tools.github import GitHubTool
+from research.tools.parser import ParserTool
 from research.prompts.yml_rule import get_yml_rules
 from research.prompts.yml_best_practices import get_yml_best_practices
 from langchain_core.prompts import ChatPromptTemplate
@@ -113,6 +114,7 @@ class WorkflowGenerator:
         """
         # repo_infoをもとにワークフロー情報を生成する処理
         llm = LLMTool()
+        parser = ParserTool()
         finish_is = False
 
         if state.generate_best_practices:
@@ -133,7 +135,7 @@ class WorkflowGenerator:
                     "- ファイル構造（ツリー形式）:\n"
                     f"{state.file_tree}\n"
                     "- 主要ファイル:\n"
-                    f"{"\n".join([file.summary() for file in state.workflow_required_files])}\n"
+                    f"{"\n".join([f"ファイル名：{file.name}\nパス：{file.path}\n内容：{parser.file_content_parse(file).parse_details if parser.file_content_parse(file).parse_details else 'なし'}\n" for file in state.workflow_required_files])}\n"
                     "- リポジトリの情報:\n"
                     f"{state.repo_info}\n"
                     "【YAML記述ルール】\n"
