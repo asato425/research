@@ -29,7 +29,7 @@ class GitHubRepoParser:
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
         llm = LLMTool()
-        parser = ParserTool()
+        parser = ParserTool(model_name=state.model_name)
 
         # リポジトリ情報の取得
         repo_info_result = github.get_repository_info(state.repo_url)
@@ -146,6 +146,14 @@ class GitHubRepoParser:
                     else:
                         required_file.parse_content = file_content_parse_result.parse_details
                         log("info", f"{required_file.name}の内容のパースに成功しました")
+                        count = len(required_file.content) - len(required_file.parse_content)
+                        log("info", f"パースによって削減できた文字数: {len(required_file.content) - len(required_file.parse_content)}")
+                        if count >= 0:
+                            log("info", f"{required_file.name}の内容が{count}文字削減されました")
+                        else:
+                            log("info", f"{required_file.name}の内容がパースの結果増加したので、元の内容を利用します")
+                            required_file.parse_content = required_file.content
+
             workflow_required_files = workflow_required_files_result.workflow_required_files
         else:
             # 主要ファイルの生成をスキップ
@@ -164,5 +172,6 @@ class GitHubRepoParser:
             "language": repo_info["language"],
             "workflow_required_files": workflow_required_files,
             "prev_node": "github_repo_parser",
-            "node_history": ["github_repo_parser"]
+            "node_history": ["github_repo_parser"],
+            "final_status": "github_parse_success",
         }
