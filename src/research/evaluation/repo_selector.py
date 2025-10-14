@@ -1,6 +1,7 @@
 import requests
 import os
 from research.tools.github import GitHubTool
+from collections import Counter
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,69 @@ if not GITHUB_TOKEN:
 
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"}
 github = GitHubTool()
+
+def fetch_language_distribution(
+    github_token: str = GITHUB_TOKEN,
+    year: int = 2025,
+    min_stars: int = 10000,
+    max_pages: int = 10,
+    per_page: int = 100,
+    start: int = 1
+):
+    """
+    GitHub上で指定条件の人気リポジトリを検索し、言語ごとの件数を集計する関数。
+
+    Parameters
+    ----------
+    github_token : str
+        GitHubのPersonal Access Token。
+    year : int
+        取得対象の最終更新年（例：2025）。
+    min_stars : int
+        取得対象のスター数の下限。
+    max_pages : int
+        最大ページ数（100件/ページ、GitHub Search APIは最大1000件まで）。
+    per_page : int
+        1ページあたりの取得件数（最大100）。
+
+    Returns
+    -------
+    dict
+        {言語: 件数} の辞書。
+    """
+
+    query = f"stars:>{min_stars} pushed:{year}-01-01..{year}-12-31"
+    url = "https://api.github.com/search/repositories"
+
+    languages = []
+
+    for page in range(start, max_pages + start):
+        params = {
+            "q": query,
+            "sort": "stars",
+            "order": "desc",
+            "per_page": per_page,
+            "page": page,
+        }
+        response = requests.get(url, headers=HEADERS, params=params)
+
+        if response.status_code != 200:
+            print(f"Error {response.status_code}: {response.text}")
+            break
+
+        data = response.json()
+        items = data.get("items", [])
+        if not items:
+            break
+
+        for repo in items:
+            lang = repo.get("language") or "Unknown"
+            languages.append(lang)
+
+        print(f"Fetched page {page}, total {len(languages)} repos so far")
+
+    counter = Counter(languages)
+    return dict(counter)
 def search_repositories(query: str, per_page: int = 10, page: int = 1):
     """GitHub API でリポジトリを検索する関数"""
     url = "https://api.github.com/search/repositories"
@@ -72,6 +136,8 @@ def get_root_folder_count(repo_full_name: str):
     else:
         print(f"Error {response.status_code} for {repo_full_name}")
         return None
+
+
 
 def main():
     languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
@@ -141,4 +207,14 @@ def main():
 # 実行方法:
 # poetry run python src/research/evaluation/repo_selector.py
 if __name__ == "__main__":
-    main()
+    #main()
+    count_result = {}
+    for i in range(10):
+        result = fetch_language_distribution(min_stars=10000, start=10*i+1)
+        for lang, count in result.items():
+            count_result[lang] = count_result.get(lang, 0) + count
+    print("\n=== 合計結果 ===")
+    total = sum(count_result.values())
+    for lang, count in sorted(count_result.items(), key=lambda x: x[1], reverse=True):
+        ratio = count / total * 100
+        print(f"{lang:15}: {count:3} ({ratio:.1f}%)")
