@@ -5,6 +5,7 @@
 from research.log_output.log import log
 from research.tools.github import GitHubTool
 from research.tools.llm import LLMTool
+from research.tools.parser import ParserTool
 from research.workflow_graph.state import WorkflowState, WorkflowRequiredFiles
 from langchain_core.prompts import ChatPromptTemplate
 from typing import Any
@@ -28,6 +29,7 @@ class GitHubRepoParser:
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
         llm = LLMTool()
+        parser = ParserTool()
 
         # リポジトリ情報の取得
         repo_info_result = github.get_repository_info(state.repo_url)
@@ -137,7 +139,13 @@ class GitHubRepoParser:
                     log("error", f"主要ファイルの取得に失敗しました: {required_file.name}")
                 else:
                     required_file.content = get_content_result.info["content"]
-            
+                    file_content_parse_result = parser.file_content_parse(required_file.content)
+                    if file_content_parse_result.parse_details is None:
+                        log("warning", f"{required_file.name}の内容のパースに失敗したため、パースする前の内容を利用します")
+                        required_file.parse_content = required_file.content
+                    else:
+                        required_file.parse_content = file_content_parse_result.parse_details
+                        log("info", f"{required_file.name}の内容のパースに成功しました")
             workflow_required_files = workflow_required_files_result.workflow_required_files
         else:
             # 主要ファイルの生成をスキップ
