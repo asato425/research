@@ -11,7 +11,6 @@ import time
 このモジュールはワークフローの実行を担当します。
 """
 
-
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
