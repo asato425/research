@@ -140,11 +140,11 @@ class GitHubRepoParser:
                 else:
                     required_file.content = get_content_result.info["content"]
                     file_content_parse_result = parser.file_content_parse(required_file.content)
-                    if file_content_parse_result.parse_details is None:
+                    if file_content_parse_result is None:
                         log("warning", f"{required_file.name}の内容のパースに失敗したため、パースする前の内容を利用します")
                         required_file.parse_content = required_file.content
                     else:
-                        required_file.parse_content = file_content_parse_result.parse_details
+                        required_file.parse_content = file_content_parse_result
                         log("info", f"{required_file.name}の内容のパースに成功しました")
                         count = len(required_file.content) - len(required_file.parse_content)
                         required_file.reduced_length = count
