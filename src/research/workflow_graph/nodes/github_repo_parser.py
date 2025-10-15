@@ -8,7 +8,6 @@ from research.tools.llm import LLMTool
 from research.tools.parser import ParserTool
 from research.workflow_graph.state import WorkflowState, WorkflowRequiredFiles
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Any
 import time
 from datetime import datetime
 
@@ -17,7 +16,7 @@ class GitHubRepoParser:
     def __init__(self, model_name: str = "gemini"):
         self.model_name = model_name
 
-    def __call__(self, state: WorkflowState) -> dict[str, Any]:
+    def __call__(self, state: WorkflowState):
 
         # 開始時間の記録
         start_time = time.time()
