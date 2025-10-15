@@ -3,7 +3,6 @@ from research.tools.github import GitHubTool
 from research.tools.parser import ParserTool
 from research.workflow_graph.state import WorkflowState, WorkflowRunResult, LogParseResult
 from research.log_output.log import log
-from typing import Any
 from datetime import datetime
 import time
 
@@ -14,7 +13,7 @@ import time
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
-    def __call__(self, state: WorkflowState) -> dict[str, Any]:
+    def __call__(self, state: WorkflowState):
 
         # 開始時間の記録
         start_time = time.time()
