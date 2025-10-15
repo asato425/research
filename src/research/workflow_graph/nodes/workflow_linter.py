@@ -80,7 +80,7 @@ class WorkflowLinter:
                 )
                 lint_result_list.append(ghalint_result)
             else:
-                log("info", "ghalintによるLintはスキップされました")
+                log("info", "ghalintはスキップします")
             
         else:
             log("info", "WorkflowLinterはスキップされました")
