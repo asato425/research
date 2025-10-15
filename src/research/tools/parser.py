@@ -202,7 +202,7 @@ class ParserTool:
             parse_details=parse_details
         )
     
-    def dict_char_count(d: dict) -> int:
+    def dict_char_count(self, d: dict) -> int:
         """
         dictのキーと値（str化したもの）の合計文字数を返す
         """
