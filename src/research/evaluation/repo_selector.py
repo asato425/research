@@ -137,17 +137,90 @@ def get_root_folder_count(repo_full_name: str):
         print(f"Error {response.status_code} for {repo_full_name}")
         return None
 
+def is_build_test_repo(repo_full_name: str):
+    """
+    リポジトリがビルド・テストジョブの自動生成に適しているかを判定する関数。
+
+    以下の条件のいずれかを満たす場合に True を返す：
+      - ビルド設定ファイルが存在する
+      - テスト関連ファイルが存在する
+
+    Parameters
+    ----------
+    repo_full_name : str
+        "owner/repo" 形式のGitHubリポジトリ名
+
+    Returns
+    -------
+    bool
+        ビルド・テストジョブが作成可能なら True、そうでなければ False
+    """
+
+    url = f"https://api.github.com/repos/{repo_full_name}/git/trees/HEAD?recursive=1"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code != 200:
+        print(f"Error {response.status_code} for {repo_full_name}")
+        return False
+
+    tree = response.json().get("tree", [])
+    files = [item["path"] for item in tree if item["type"] == "blob"]
+
+    # === 1. 言語ごとのビルド設定ファイル ===
+    build_files = {
+        "Python": ["requirements.txt", "setup.py", "pyproject.toml", "tox.ini"],
+        "JavaScript": ["package.json"],
+        "Java": ["pom.xml", "build.gradle", "gradlew"],
+        "Go": ["go.mod"],
+        "C": ["Makefile", "CMakeLists.txt"],
+        "Ruby": ["Gemfile", "Rakefile"],
+        "Rust": ["Cargo.toml"]
+    }
+
+    # === 2. テストディレクトリ・テストファイル ===
+    test_dirs = ["test", "tests", "__tests__", "src/test", "spec"]
+
+    # === 3. 判定ロジック ===
+    has_build_file = any(
+        os.path.basename(f) in sum(build_files.values(), []) for f in files
+    )
+    has_test_file = False
+    """ビルド・テストジョブ作成可能性を判定する簡易関数"""
+    for f in files:
+        parts = f.lower().split("/")  # パスをディレクトリごとに分解
+        # ディレクトリ名に test, tests, spec などが含まれるか
+        if any(t in parts for t in test_dirs):
+            has_test_file = True
+            break
+        # ファイル名規則でテストファイルを検出
+        filename = os.path.basename(f).lower()
+        if filename.endswith("_test.go") or filename.startswith("test_") or filename.endswith("_spec.rb"):
+            has_test_file = True
+            break
+
+    if has_build_file and has_test_file:
+        print(f"[OK] {repo_full_name}: ビルド設定とテストが確認されました。")
+        return True
+    elif has_build_file:
+        print(f"[INFO] {repo_full_name}: ビルド設定ファイルのみ確認されました。")
+        return False
+    elif has_test_file:
+        print(f"[INFO] {repo_full_name}: テスト関連ファイルのみ確認されました。")
+        return False 
+    else:
+        print(f"[NG] {repo_full_name}: ビルド設定・テスト関連ファイルが見つかりません。")
+        return False
 
 
 def main():
-    languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
+    #languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
+    languages = ["Python", "Java", "JavaScript"]
     #languages = ["Python"]  # テスト用に1言語に絞る
     star_threshold = 10000
-    pushed_after = "2024-10-01"
+    pushed_after = "2024-01-01"
     main_lang_threshold = 0.9
-    max_file_count = 1000          # 最大ファイル数
-    max_root_folder_count = 50     # 最大ルートフォルダ数
-    repo_num = 20                  # 各言語ごとに取得したいリポジトリ数
+    # max_file_count = 1000          # 最大ファイル数
+    # max_root_folder_count = 50     # 最大ルートフォルダ数
+    repo_num = 10                    # 各言語ごとに取得したいリポジトリ数
     repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
@@ -171,12 +244,16 @@ def main():
 
                 # ファイル数チェック
                 file_count = get_file_count(name)
-                if file_count is None or file_count > max_file_count:
-                    continue
+                # if file_count is None or file_count > max_file_count:
+                #     continue
 
                 # ルートフォルダ数チェック
                 root_folders = get_root_folder_count(name)
-                if root_folders is None or root_folders > max_root_folder_count:
+                # if root_folders is None or root_folders > max_root_folder_count:
+                #     continue
+                
+                # ビルド・テストジョブ作成可能性チェック
+                if not is_build_test_repo(name):
                     continue
 
                 print(f"- {name} ({stars}★) {url} | 主言語={main_lang}, 割合={ratio:.2%}, "
@@ -207,14 +284,14 @@ def main():
 # 実行方法:
 # poetry run python src/research/evaluation/repo_selector.py
 if __name__ == "__main__":
-    #main()
-    count_result = {}
-    for i in range(10):
-        result = fetch_language_distribution(min_stars=10000, start=10*i+1)
-        for lang, count in result.items():
-            count_result[lang] = count_result.get(lang, 0) + count
-    print("\n=== 合計結果 ===")
-    total = sum(count_result.values())
-    for lang, count in sorted(count_result.items(), key=lambda x: x[1], reverse=True):
-        ratio = count / total * 100
-        print(f"{lang:15}: {count:3} ({ratio:.1f}%)")
+    main()
+    # count_result = {}
+    # for i in range(10):
+    #     result = fetch_language_distribution(min_stars=10000, start=10*i+1)
+    #     for lang, count in result.items():
+    #         count_result[lang] = count_result.get(lang, 0) + count
+    # print("\n=== 合計結果 ===")
+    # total = sum(count_result.values())
+    # for lang, count in sorted(count_result.items(), key=lambda x: x[1], reverse=True):
+    #     ratio = count / total * 100
+    #     print(f"{lang:15}: {count:3} ({ratio:.1f}%)")
