@@ -5,7 +5,6 @@ from research.tools.github import GitHubTool
 from research.tools.llm import LLMTool
 from research.tools.rag import RAGTool
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Any
 from langchain_core.output_parsers import StrOutputParser
 import time
 """
@@ -19,7 +18,7 @@ class ExplanationGenerator:
         self.model_name = model_name
 
         
-    def __call__(self, state: WorkflowState) -> dict[str, Any]:
+    def __call__(self, state: WorkflowState):
         """解説文を生成するメソッド"""
         
         # 開始時間の記録
