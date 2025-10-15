@@ -45,7 +45,7 @@ class WorkflowLinter:
                     status=actionlint_result.status,
                     lint_name="actionlint",
                     raw_error=actionlint_result.raw_output,
-                    parsed_error=parse_result.parse_details
+                    parsed_error=parse_result
                     # コスト削減+あまり意味がなさそうなのでそのまま出す
                     #parsed_error=actionlint_result.raw_output
                 )
@@ -74,7 +74,7 @@ class WorkflowLinter:
                     status=ghalint_result.status,
                     lint_name="ghalint",
                     raw_error=ghalint_result.raw_output,
-                    parsed_error=parse_result.parse_details
+                    parsed_error=parse_result
                     # コスト削減+あまり意味がなさそうなのでそのまま出す
                     #parsed_error=ghalint_result.raw_output
                 )
