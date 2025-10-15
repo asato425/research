@@ -1,14 +1,12 @@
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from research.log_output.log import log
 from research.tools.llm import LLMTool
 from research.tools.github import WorkflowResult
 from research.tools.linter import LintResult
 import re
-from typing import Any
 
-class ParseResult(BaseModel):
-    parse_details: Any | None = Field(None, description="パースの詳細")
 
 class LogParseResult(BaseModel):
     linter_errors: str | None = Field(None, description="Linterによるエラーの説明、ない場合はNoneとしてください")
@@ -23,7 +21,7 @@ class ParserTool:
         """
         self.model_name = model_name
 
-    def workflow_log_parse(self, workflow_result: WorkflowResult) -> ParseResult:
+    def workflow_log_parse(self, workflow_result: WorkflowResult) -> LogParseResult:
 
         """
         WorkflowResult型の変数をLLMプロンプト用に整形し、
@@ -101,14 +99,14 @@ class ParserTool:
             unknown_errors=None
         )
 
-    def lint_result_parse(self, lint_result: LintResult) -> ParseResult:
+    def lint_result_parse(self, lint_result: LintResult):
 
         """
         LintResult型の変数をLLMプロンプト用に整形し、
         エラー内容と修正案をわかりやすく辞書形式で返す。
 
         Returns:
-            LintParseResult: error_details(str|None)
+            parse_details(str|List[dict]|None)
         """
         
         status = lint_result.status
@@ -146,11 +144,9 @@ class ParserTool:
                     if i >= len(raw_output) - 1:
                         log("info", f"raw_outputのdictの合計文字数が{total}で1万文字を超えなかったため、そのまま利用します")
                     
-        return ParseResult(
-            parse_details=parse_details
-        )
+        return parse_details
 
-    def file_content_parse(self, file_content: str) -> ParseResult:
+    def file_content_parse(self, file_content: str):
 
         """
         ファイルの内容をLLMプロンプト用に整形し、
@@ -162,7 +158,6 @@ class ParserTool:
         
         llm = LLMTool().create_model(
             model_name=self.model_name, 
-            output_model=ParseResult
         )
         
         parse_details = None
@@ -186,21 +181,17 @@ class ParserTool:
                 ]
             )
 
-            chain = llm_prompt | llm
+            chain = llm_prompt | llm | StrOutputParser()
             result = chain.invoke({
                 "file_content": file_content
             })
             if result is None:
                 log("error", "ParserTool.file_content_parse: LLMの応答がNoneのため、パースする前の内容を出力にします")
-                return ParseResult(
-                    parse_details=file_content
-                )
+                return file_content
             return result
         
         log("info", f"ファイル内容パーサー結果: {parse_details or 'No parse details'}")
-        return ParseResult(
-            parse_details=parse_details
-        )
+        return parse_details
     
     def dict_char_count(self, d: dict) -> int:
         """
