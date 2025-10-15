@@ -23,7 +23,7 @@ BEST_PRACTICES_ENABLE_REUSE = True
 """
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 """
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-pro"
 
 now_str = datetime.now().strftime("%m%d_%H%M")
 # コマンドライン引数のデフォルト値
@@ -101,7 +101,7 @@ def save_states_to_excel(states: list[WorkflowState], language: str = "unknown")
         if row == "messages" or row == "repo_info" or row == "file_tree" or \
         row == "workflow_required_files" or row == "generate_workflows" or \
         row == "generate_explanation" or row == "lint_results" or \
-        row == "workflow_run_results":
+        row == "workflow_run_results" or row == "before_generated_text":
             return True
         return False
     rows = []
@@ -143,177 +143,60 @@ def delete_remote_repo(language_repo_dict: dict[str, dict[int, str]]):
             github.delete_remote_repository(repo_url)
 
 def main():
+    # 開始時間の記録
+    start_time = time.time()
     set_log_is(SET_LOG_IS)
     # ここに評価したいリポジトリのURL(フォーク済み)を追加してください(今書いてあるのは例です)
     language_repo_dict = {
         # "python": {
         #     1: "https://github.com/asato425/test_python"
         # },
-        # "python": {
-        #     1: "https://github.com/asato425/free-programming-books",
-        #     2: "https://github.com/asato425/public-apis",
-        #     3: "https://github.com/asato425/system-design-primer",
-        #     4: "https://github.com/asato425/awesome-python",
-        #     5: "https://github.com/asato425/youtube-dl",
-        #     6: "https://github.com/asato425/HelloGitHub",
-        #     7: "https://github.com/asato425/DeepSeek-V3",
-        #     8: "https://github.com/asato425/ComfyUI",
-        #     9: "https://github.com/asato425/whisper",
-        #     10: "https://github.com/asato425/manim",
-        #     11: "https://github.com/asato425/markitdown",
-        #     12: "https://github.com/asato425/Deep-Live-Cam",
-        #     13: "https://github.com/asato425/browser-use",
-        #     14: "https://github.com/asato425/flask",
-        #     15: "https://github.com/asato425/awesome-machine-learning",
-        #     16: "https://github.com/asato425/sherlock",
-        #     17: "https://github.com/asato425/new-pac",
-        #     18: "https://github.com/asato425/gpt4free",
-        #     19: "https://github.com/asato425/keras",
-        #     20: "https://github.com/asato425/open-interpreter",
-        # },
+        "python": {
+            1: "https://github.com/asato425/public-apis",
+            2: "https://github.com/asato425/Python-1",
+            3: "https://github.com/asato425/transformers",
+            4: "https://github.com/asato425/youtube-dl",
+            5: "https://github.com/asato425/yt-dlp",
+            6: "https://github.com/asato425/langchain-1",
+            7: "https://github.com/asato425/thefuck",
+            8: "https://github.com/asato425/ComfyUI",
+            9: "https://github.com/asato425/fastapi",
+            10: "https://github.com/asato425/whisper"
+        },
         "java": {
-            1: "https://github.com/asato425/JavaGuide",
-            2: "https://github.com/asato425/GitHub-Chinese-Top-Charts",
-            3: "https://github.com/asato425/mall",
-            4: "https://github.com/asato425/advanced-java",
-            5: "https://github.com/asato425/interviews",
-            6: "https://github.com/asato425/termux-app",
-            7: "https://github.com/asato425/MPAndroidChart",
-            8: "https://github.com/asato425/easyexcel",
-            9: "https://github.com/asato425/xxl-job",
-            10: "https://github.com/asato425/spring-cloud-alibaba",
-            # 11: "https://github.com/asato425/vhr",
-            # 12: "https://github.com/asato425/SmartRefreshLayout",
-            # 13: "https://github.com/asato425/gson",
-            # 14: "https://github.com/asato425/Apktool",
-            # 15: "https://github.com/asato425/source-code-hunter",
-            # 16: "https://github.com/asato425/GSYVideoPlayer",
-            # 17: "https://github.com/asato425/HikariCP",
-            # 18: "https://github.com/asato425/RxAndroid",
-            # 19: "https://github.com/asato425/Algorithms",
-            # 20: "https://github.com/asato425/APIJSON",
+            1: "https://github.com/asato425/java-design-patterns",
+            2: "https://github.com/asato425/mall",
+            3: "https://github.com/asato425/spring-boot",
+            4: "https://github.com/asato425/elasticsearch",
+            5: "https://github.com/asato425/Java-1",
+            6: "https://github.com/asato425/spring-framework",
+            7: "https://github.com/asato425/guava",
+            8: "https://github.com/asato425/RxJava",
+            9: "https://github.com/asato425/termux-app",
+            10: "https://github.com/asato425/jadx",
         },
         "javascript": {
             1: "https://github.com/asato425/javascript-algorithms",
             2: "https://github.com/asato425/javascript",
             3: "https://github.com/asato425/create-react-app",
-            4: "https://github.com/asato425/awesome-mac",
-            5: "https://github.com/asato425/github-readme-stats",
-            6: "https://github.com/asato425/json-server",
-            7: "https://github.com/asato425/express",
-            8: "https://github.com/asato425/33-js-concepts",
-            9: "https://github.com/asato425/lodash",
-            10: "https://github.com/asato425/jquery",
-            # 11: "https://github.com/asato425/drawio-desktop",
-            # 12: "https://github.com/asato425/hiring-without-whiteboards",
-            # 13: "https://github.com/asato425/dayjs",
-            # 14: "https://github.com/asato425/serverless",
-            # 15: "https://github.com/asato425/react",
-            # 16: "https://github.com/asato425/htmx",
-            # 17: "https://github.com/asato425/30-Days-Of-JavaScript",
-            # 18: "https://github.com/asato425/swiper",
-            # 20: "https://github.com/asato425/preact",
+            4: "https://github.com/asato425/github-readme-stats",
+            5: "https://github.com/asato425/express",
+            6: "https://github.com/asato425/webpack",
+            7: "https://github.com/asato425/lodash",
+            8: "https://github.com/asato425/jquery",
+            9: "https://github.com/asato425/angular",
+            10: "https://github.com/asato425/anything-llm",
         },
-        "c": {
-            1: "https://github.com/asato425/stb",
-            2: "https://github.com/asato425/nginx",
-            3: "https://github.com/asato425/GoodbyeDPI",
-            4: "https://github.com/asato425/libuv",
-            5: "https://github.com/asato425/masscan",
-            6: "https://github.com/asato425/mimikatz",
-            7: "https://github.com/asato425/BlackHole",
-            8: "https://github.com/asato425/sway",
-            9: "https://github.com/asato425/rofi",
-            10: "https://github.com/asato425/ecapture",
-            # 11: "https://github.com/asato425/glfw",
-            # 12: "https://github.com/asato425/nginx-rtmp-module",
-            # 13: "https://github.com/asato425/coturn",
-            # 14: "https://github.com/asato425/libsodium",
-            # 15: "https://github.com/asato425/openvpn",
-            # 16: "https://github.com/asato425/lua-nginx-module",
-            # 17: "https://github.com/asato425/thc-hydra",
-            # 18: "https://github.com/asato425/Nuklear",
-            # 19: "https://github.com/asato425/xxHash",
-            # 20: "https://github.com/asato425/proxychains-ng",
-        },
-        "c++": {
-            1: "https://github.com/asato425/tesseract",
-            2: "https://github.com/asato425/TrafficMonitor",
-            3: "https://github.com/asato425/leveldb",
-            4: "https://github.com/asato425/interview",
-            5: "https://github.com/asato425/C-Plus-Plus",
-            6: "https://github.com/asato425/Hyprland",
-            7: "https://github.com/asato425/spdlog",
-            8: "https://github.com/asato425/shadPS4",
-            9: "https://github.com/asato425/fmt",
-            10: "https://github.com/asato425/tinyrenderer",
-            # 11: "https://github.com/asato425/simdjson",
-            # 12: "https://github.com/asato425/deskflow",
-            # 13: "https://github.com/asato425/Catch2",
-            # 14: "https://github.com/asato425/uWebSockets",
-            # 15: "https://github.com/asato425/TranslucentTB",
-            # 16: "https://github.com/asato425/cutter",
-            # 17: "https://github.com/asato425/dxvk",
-            # 18: "https://github.com/asato425/muduo",
-            # 19: "https://github.com/asato425/Waifu2x-Extension-GUI",
-            # 20: "https://github.com/asato425/subconverter",
-        },
-        "c#": {
-            1: "https://github.com/asato425/v2rayN",
-            2: "https://github.com/asato425/shadowsocks-windows",
-            3: "https://github.com/asato425/RevokeMsgPatcher",
-            4: "https://github.com/asato425/ScreenToGif",
-            5: "https://github.com/asato425/WaveFunctionCollapse",
-            6: "https://github.com/asato425/awesome-dotnet-core",
-            7: "https://github.com/asato425/UniGetUI",
-            8: "https://github.com/asato425/CMWTAT_Digital_Edition",
-            9: "https://github.com/asato425/Dapper",
-            10: "https://github.com/asato425/CleanArchitecture",
-            # 11: "https://github.com/asato425/Jackett",
-            # 12: "https://github.com/asato425/QuestPDF",
-            # 13: "https://github.com/asato425/YoutubeDownloader",
-            # 14: "https://github.com/asato425/BBDown",
-            # 15: "https://github.com/asato425/ArchiSteamFarm",
-            # 16: "https://github.com/asato425/csharplang",
-            # 17: "https://github.com/asato425/MediatR",
-            # 18: "https://github.com/asato425/FileConverter",
-            # 19: "https://github.com/asato425/g-helper",
-            # 20: "https://github.com/asato425/AutoMapper",
-        },
-        "go": {
-            1: "https://github.com/asato425/awesome-go",
-            2: "https://github.com/asato425/ollama",
-            3: "https://github.com/asato425/frp",
-            4: "https://github.com/asato425/gin",
-            5: "https://github.com/asato425/caddy",
-            6: "https://github.com/asato425/dive",
-            7: "https://github.com/asato425/alist",
-            8: "https://github.com/asato425/v2ray-core",
-            9: "https://github.com/asato425/cobra",
-            10: "https://github.com/asato425/gorm",
-            # 11: "https://github.com/asato425/fiber",
-            # 12: "https://github.com/asato425/compose",
-            # 13: "https://github.com/asato425/bubbletea",
-            # 14: "https://github.com/asato425/beego",
-            # 15: "https://github.com/asato425/CasaOS",
-            # 16: "https://github.com/asato425/echo",
-            # 17: "https://github.com/asato425/headscale",
-            # 18: "https://github.com/asato425/Xray-core",
-            # 19: "https://github.com/asato425/viper",
-            # 20: "https://github.com/asato425/sing-box",
-        },
-        "ruby": {
-            1: "https://github.com/asato425/awesome-swift",
-            2: "https://github.com/asato425/devise",
-            3: "https://github.com/asato425/quine-relay",
-            4: "https://github.com/asato425/fluentd",
-            5: "https://github.com/asato425/kamal",
-            6: "https://github.com/asato425/tmuxinator",
-            7: "https://github.com/asato425/capistrano",
-            8: "https://github.com/asato425/sinatra",
-            9: "https://github.com/asato425/remote-working",
-            10: "https://github.com/asato425/capybara",
-        },
+        # "c++": {
+        # },
+        # "c#": {
+  
+        # },
+        # "go": {
+
+        # },
+        # "ruby": {
+        # },
         
     }
     # for language, repos in language_repo_dict.items():
@@ -324,6 +207,10 @@ def main():
     #     print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
 
     delete_remote_repo(language_repo_dict) # フォークしたリポジトリを削除する場合はコメントアウトを外す
+    
+    # 終了時間の記録とログ出力
+    elapsed = time.time() - start_time
+    log("info", f"実験実行時間: {elapsed:.2f}秒")
 # 実行方法:
 # poetry run python src/research/evaluation/evaluation.py
 if __name__ == "__main__":
