@@ -22,10 +22,24 @@ class WorkflowExecutor:
         local_path = state.local_path
         github = GitHubTool()
         parser = ParserTool(model_name=state.model_name)
-    
+        
+        # pushするymlファイルの読み込み
+        read_yml_file_result = github.read_file(
+            local_path=local_path,
+            file_path=".github/workflows/" + state.yml_file_name
+        )
+        generated_text = state.generate_workflows[-1].generated_text if len(state.generate_workflows) > 0 else None
+        if read_yml_file_result is None:
+            log("error", "pushするymlファイルの読み込みに失敗しました(read_file関数がNoneを返しました)")
+        elif read_yml_file_result.status != "success":
+            log("error", "pushするymlファイルの読み込みに失敗しました(read_file関数のstatusがsuccessではありません)")
+        else:
+            log("info", "pushするymlファイルの読み込みに成功しました")
+            generated_text = read_yml_file_result.info["content"]
+
         # 前のワークフローと全く同じ内容をLLMが生成し、コミットができないことがあるのでその場合は終了する
         if len(state.generate_workflows) >= 2:
-            if state.before_generated_text == state.generate_workflows[-1].generated_text:
+            if state.before_generated_text == generated_text:
                 log("warning", "LLMが前回コミットしたワークフローと全く同じ内容を生成しており、コミットができないため、プログラムを終了します")
                 return {
                     "finish_is": True,
@@ -143,5 +157,5 @@ class WorkflowExecutor:
             "prev_node": "workflow_executor",
             "node_history": ["workflow_executor"],
             "final_status": final_status,
-            "before_generated_text": state.generate_workflows[-1].generated_text if len(state.generate_workflows) > 0 else None,
+            "before_generated_text": generated_text
         }
