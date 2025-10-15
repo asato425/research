@@ -187,10 +187,10 @@ class WorkflowGenerator:
         
         human_prompt = HumanMessage(
             content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
-                    "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同じエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintやキャッシュなど)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
+                    "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同様のエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintやキャッシュなど)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
                     "- Lintエラーの内容:\n"
                     f"{lint_result.parsed_error}\n"
-                    "注意点：前のワークフローと全く同じ内容は生成しないでください\n"
+                    "注意点：今までに生成されたワークフローと全く同じ内容は生成しないでください\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
@@ -236,10 +236,10 @@ class WorkflowGenerator:
 
         human_prompt = HumanMessage(
             content="以下の条件・情報をもとに、GitHub Actionsワークフロー（YAML）を修正してください。"
-                    "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同じエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintやキャッシュなど)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
+                    "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同様のエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintやキャッシュなど)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
                     "- 実行エラーの内容:\n"
                     f"{exec_result.parsed_error.yml_errors}\n"
-                    "注意点：前のワークフローと全く同じ内容は生成しないでください\n"
+                    "注意点：今までの生成されたワークフローと全く同じ内容は生成しないでください\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
