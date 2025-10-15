@@ -26,7 +26,7 @@ class WorkflowExecutor:
         # pushするymlファイルの読み込み
         read_yml_file_result = github.read_file(
             local_path=local_path,
-            file_path=".github/workflows/" + state.yml_file_name
+            relative_path=".github/workflows/" + state.yml_file_name
         )
         generated_text = state.generate_workflows[-1].generated_text if len(state.generate_workflows) > 0 else None
         if read_yml_file_result is None:
