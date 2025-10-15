@@ -3,7 +3,6 @@ from research.tools.linter import LinterTool
 from research.tools.parser import ParserTool
 from research.workflow_graph.state import LintResult,WorkflowState
 from research.log_output.log import log
-from typing import Any
 import time
 
 """
@@ -18,7 +17,7 @@ class WorkflowLinter:
     def __init__(self, model_name: str = "gemini"):
         self.model_name = model_name
 
-    def __call__(self, state: WorkflowState) -> dict[str, Any]:
+    def __call__(self, state: WorkflowState):
         """
         指定したYAMLファイルのワークフローを構文解析し、エラーや脆弱性をチェックするメソッドの例。
         実装例: actionlint等の外部ツールを呼び出してチェックする。
