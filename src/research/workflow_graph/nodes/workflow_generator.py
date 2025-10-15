@@ -10,7 +10,6 @@ from research.tools.github import GitHubTool
 from research.prompts.yml_rule import get_yml_rules
 from research.prompts.yml_best_practices import get_yml_best_practices
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Any
 import time
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -22,7 +21,7 @@ class WorkflowGenerator:
     def __init__(self, model_name: str = "gemini"):
         self.model_name = model_name
 
-    def __call__(self, state: WorkflowState)-> dict[str, Any]:
+    def __call__(self, state: WorkflowState):
         
         # 開始時間の記録
         start_time = time.time()
