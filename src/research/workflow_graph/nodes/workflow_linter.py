@@ -1,6 +1,6 @@
 # workflow_linter.py
 from research.tools.linter import LinterTool
-#from research.tools.parser import ParserTool
+from research.tools.parser import ParserTool
 from research.workflow_graph.state import LintResult,WorkflowState
 from research.log_output.log import log
 from typing import Any
@@ -31,8 +31,7 @@ class WorkflowLinter:
         if state.run_linter:
 
             linter = LinterTool()
-            # コスト削減のため一旦コメントアウト
-            #parser = ParserTool(model_name=self.model_name)
+            parser = ParserTool(model_name=self.model_name)
 
             local_path = state.local_path
             #filename = ".github/workflows/" + state.yml_file_name
@@ -41,14 +40,14 @@ class WorkflowLinter:
             if state.run_actionlint:
                 log("info", "actionlintによるLintを開始します")
                 actionlint_result = linter.actionlint(local_path)
-                #parse_result = parser.lint_result_parse(actionlint_result)
+                parse_result = parser.lint_result_parse(actionlint_result)
                 actionlint_result = LintResult(
                     status=actionlint_result.status,
                     lint_name="actionlint",
                     raw_error=actionlint_result.raw_output,
-                    #parsed_error=parse_result.parse_details
+                    parsed_error=parse_result.parse_details
                     # コスト削減+あまり意味がなさそうなのでそのまま出す
-                    parsed_error=actionlint_result.raw_output
+                    #parsed_error=actionlint_result.raw_output
                 )
                 lint_result_list.append(actionlint_result)
             else:
@@ -70,14 +69,14 @@ class WorkflowLinter:
                 log("info", "ghalintによるLintを開始します")
                 # ghalintによるチェック
                 ghalint_result = linter.ghalint(local_path)
-                #parse_result = parser.lint_result_parse(ghalint_result)
+                parse_result = parser.lint_result_parse(ghalint_result)
                 ghalint_result = LintResult(
                     status=ghalint_result.status,
                     lint_name="ghalint",
                     raw_error=ghalint_result.raw_output,
-                    #parsed_error=parse_result.parse_details
+                    parsed_error=parse_result.parse_details
                     # コスト削減+あまり意味がなさそうなのでそのまま出す
-                    parsed_error=ghalint_result.raw_output
+                    #parsed_error=ghalint_result.raw_output
                 )
                 lint_result_list.append(ghalint_result)
             else:

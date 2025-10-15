@@ -5,9 +5,10 @@ from research.tools.llm import LLMTool
 from research.tools.github import WorkflowResult
 from research.tools.linter import LintResult
 import re
+from typing import Any
 
 class ParseResult(BaseModel):
-    parse_details: str | None = Field(None, description="パースの詳細")
+    parse_details: Any | None = Field(None, description="パースの詳細")
 
 class LogParseResult(BaseModel):
     linter_errors: str | None = Field(None, description="Linterによるエラーの説明、ない場合はNoneとしてください")
@@ -110,12 +111,6 @@ class ParserTool:
             LintParseResult: error_details(str|None)
         """
         
-        llm = LLMTool().create_model(
-            model_name=self.model_name, 
-            output_model=ParseResult
-        )
-        
-        local_path = lint_result.local_path
         status = lint_result.status
         error_message = lint_result.error_message
         raw_output = lint_result.raw_output
@@ -130,33 +125,27 @@ class ParserTool:
             parse_details = "問題は検出されませんでした。"
         else:
             # failの場合
-            llm_prompt = ChatPromptTemplate.from_messages(
-                [
-                    (
-                        "system",
-                        "あなたは日本のソフトウェア開発の専門家です。",
-                    ),
-                    (
-                        "human",
-                        "以下はGitHub Actionsのlint結果です。エラーの詳細をわかりやすく教えてください。\n"
-                        "local_path: {local_path}\n"
-                        "status: {status}\n"
-                        "error_message: {error_message}\n"
-                        "raw_output: {raw_output}\n"
-                    )
-                ]
-            )
-
-            chain = llm_prompt | llm
-            result = chain.invoke({
-                "local_path": local_path,
-                "status": status,
-                "error_message": error_message,
-                "raw_output": raw_output
-            })
-            log("info", f"Lintパーサー結果: {result.parse_details}")
-            return result
-        log("info", f"Lintパーサー結果: {parse_details or 'No parse details'}")
+            raw_output = raw_output
+            # raw_outputがstrの時とjson型の時で処理を変えたい
+            if isinstance(raw_output, str):
+                if len(raw_output) > 10000:
+                    log("warning", "raw_outputが1万文字を超えたため、フィルターを適用します")
+                    raw_output = raw_output[:10000]  # LLMのトークン制限を考慮して最初の10000文字だけ利用
+                else:
+                    log("info", f"raw_outputの文字数: {len(raw_output)}のため、そのまま利用します")
+                    parse_details = raw_output
+            elif isinstance(raw_output, list):
+                total = 0
+                for i in range(len(raw_output)):
+                    total += self.dict_char_count(raw_output[i])
+                    if total > 10000:
+                        log("warning", f"raw_outputのdictの合計文字数が{total}で1万文字を超えたため、フィルターを適用します")
+                        parse_details = raw_output[:i] if i > 0 else raw_output[:1]
+                        break
+                    parse_details = raw_output[:i+1]
+                    if i >= len(raw_output) - 1:
+                        log("info", f"raw_outputのdictの合計文字数が{total}で1万文字を超えなかったため、そのまま利用します")
+                    
         return ParseResult(
             parse_details=parse_details
         )
@@ -212,6 +201,15 @@ class ParserTool:
         return ParseResult(
             parse_details=parse_details
         )
+    
+    def dict_char_count(d: dict) -> int:
+        """
+        dictのキーと値（str化したもの）の合計文字数を返す
+        """
+        total = 0
+        for k, v in d.items():
+            total += len(str(k)) + len(str(v))
+        return total
     def filter(self, log_:str):
         #ログをフィルターする関数
         # フィルターした結果1万文字を超えたらcontextを小さくする
