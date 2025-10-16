@@ -123,7 +123,8 @@ class GitHubRepoParser:
             ])
 
             # チェーンの作成
-            chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
+            #chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
+            chain = prompt | llm.create_model(model_name="gpt-4o-mini", output_model=WorkflowRequiredFiles)
 
             # チェーンの実行
             workflow_required_files_result = chain.invoke({
