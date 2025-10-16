@@ -14,8 +14,7 @@ class LogParseResult(BaseModel):
     project_errors: str | None = Field(None, description="その他プロジェクト固有のエラーの説明、ない場合はNoneとしてください")
     unknown_errors: str | None = Field(None, description="不明なエラーの説明、ない場合はNoneとしてください")
 class ParserTool:
-    # TODO: Geminiの無料期間が終わったらgpt-4o-miniに変更する
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gpt-4o-mini"):
         """
         Returns:
             None
