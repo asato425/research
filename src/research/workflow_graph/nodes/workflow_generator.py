@@ -201,6 +201,9 @@ class WorkflowGenerator:
         elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             finish_is = True
+        elif result.generated_text is None:
+            log("error", "ワークフローのLintエラー修正結果のgenerated_textがNoneなのでプログラムを終了します")
+            finish_is = True
         else:
             log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
         return result, human_prompt, finish_is
@@ -248,6 +251,9 @@ class WorkflowGenerator:
             finish_is = True
         elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
+            finish_is = True
+        elif result.generated_text is None:
+            log("error", "ワークフローの実行エラー修正結果のgenerated_textがNoneなのでプログラムを終了します")
             finish_is = True
         else:
             log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
