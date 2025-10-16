@@ -10,6 +10,7 @@ import time
 このモジュールはワークフローの実行を担当します。
 """
 
+EXECUTE_LIMIT = 12
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
@@ -86,10 +87,10 @@ class WorkflowExecutor:
                 repo_url=state.repo_url,
                 commit_sha=commit_sha
             )
-            # ワークフローの完了を最大20分(5分*4回(最初の1回+繰り返しの3回))まで待機
+            # ワークフローの完了を5分*EXECUTE_LIMIT回まで待機
             limit = 0
-            while get_workflow_log_result.status == "in_progress" and limit <= 3:
-                log("warning", "ワークフローの実行中のため、ログの取得を10秒後に再試行します")
+            while (get_workflow_log_result.status == "in_progress" or get_workflow_log_result.status == "queued" or get_workflow_log_result.status == "pending") and limit <= EXECUTE_LIMIT:
+                log("warning", "ワークフローの実行中またはキューにあるため、ログの取得を10秒後に再試行します")
                 time.sleep(10)
                 get_workflow_log_result = github.get_latest_workflow_logs(
                     repo_url=state.repo_url,
