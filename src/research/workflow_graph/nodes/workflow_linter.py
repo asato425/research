@@ -30,7 +30,8 @@ class WorkflowLinter:
         if state.run_linter:
 
             linter = LinterTool()
-            parser = ParserTool(model_name=self.model_name)
+            # 生成以外のLLMの処理はgpt-4o-miniなどの軽量モデルにするため引数の指定なし
+            parser = ParserTool()
 
             local_path = state.local_path
             #filename = ".github/workflows/" + state.yml_file_name

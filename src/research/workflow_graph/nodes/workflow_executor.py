@@ -21,7 +21,8 @@ class WorkflowExecutor:
         
         local_path = state.local_path
         github = GitHubTool()
-        parser = ParserTool(model_name=state.model_name)
+        # パースは軽量モデルで十分なのでstate.model_nameは使わない
+        parser = ParserTool()
         
         # pushするymlファイルの読み込み
         read_yml_file_result = github.read_file(

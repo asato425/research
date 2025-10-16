@@ -13,7 +13,7 @@ from datetime import datetime
 
 class GitHubRepoParser:
     """GitHubリポジトリ情報の取得を担当するクラス"""
-    def __init__(self, model_name: str = "gemini"):
+    def __init__(self, model_name: str = "gpt-4o-mini"):
         self.model_name = model_name
 
     def __call__(self, state: WorkflowState):
@@ -28,7 +28,10 @@ class GitHubRepoParser:
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
         llm = LLMTool()
-        parser = ParserTool(model_name=state.model_name)
+        
+        # 生成以外のLLMの処理はgpt-4o-miniなどの軽量モデルにするため引数の指定なし
+        parser = ParserTool()
+        
 
         # リポジトリ情報の取得
         repo_info_result = github.get_repository_info(state.repo_url)

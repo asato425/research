@@ -32,7 +32,13 @@ class ExplanationGenerator:
             model = llm.create_model(
                 model_name=self.model_name,
             )
-   
+            
+            # TODO: 最終の実行結果でプロジェクトエラーがある場合は、その内容も解説に含めた方がいいのでは？
+            # if state.workflow_run_results[-1].parsed_error.project_errors is None:
+            #     project_errors = "プロジェクトのエラーはありません"
+            # else:
+            #     project_errors = state.workflow_run_results[-1].parsed_error.project_errors
+                
             prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", "あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。"),
