@@ -22,7 +22,8 @@ class WorkflowExecutor:
         local_path = state.local_path
         github = GitHubTool()
         # パースは軽量モデルで十分なのでstate.model_nameは使わない
-        parser = ParserTool()
+        # TODO: パースの精度が悪かったらLLMのモデルをワークフロー生成のモデルと同じにする
+        parser = ParserTool(model_name=state.model_name)
         
         # pushするymlファイルの読み込み
         read_yml_file_result = github.read_file(
@@ -65,33 +66,17 @@ class WorkflowExecutor:
 
         # ワークフローの実行制御
         if state.run_workflow_executer:
-            # ワークフローの実行
-            if len(state.generate_workflows) > 0:
-                pass
-                # workflow_execute_result = github.dispatch_workflow(
-                #     repo_url=state.repo_url,
-                #     ref=state.work_ref,
-                #     workflow_id=state.yml_file_name
-                #)
-            else:
-                log("error", "生成されたワークフローが存在しないためプログラムを終了します")
-                return {
-                    "finish_is": True,
-                    "final_status": "no generated workflow to execute"}
-
-            # if workflow_execute_result.status != "success":
-            #     log("error", "ワークフローの実行に失敗したのでプログラムを終了します")
-            #     log("error", f"詳細: {workflow_execute_result}、repo_url: {state.repo_url}, ref: {state.work_ref}, workflow_id: {state.yml_file_name}")
-            #     return {"finish_is": True}
-            
+            # ワークフローのログ取得
             get_workflow_log_result = github.get_latest_workflow_logs(
                 repo_url=state.repo_url,
                 commit_sha=commit_sha
             )
             # ワークフローの完了を5分*EXECUTE_LIMIT回まで待機
             limit = 0
-            while (get_workflow_log_result.status == "in_progress" or get_workflow_log_result.status == "queued" or get_workflow_log_result.status == "pending") and limit <= EXECUTE_LIMIT:
-                log("warning", "ワークフローの実行中またはキューにあるため、ログの取得を10秒後に再試行します")
+            while (get_workflow_log_result.status == "in_progress" 
+                   or get_workflow_log_result.status == "queued" 
+                   or get_workflow_log_result.status == "pending") and limit <= EXECUTE_LIMIT:
+                log("warning", f"ワークフローの実行結果が{get_workflow_log_result.status}のため、ログの取得を10秒後に再試行します")
                 time.sleep(10)
                 get_workflow_log_result = github.get_latest_workflow_logs(
                     repo_url=state.repo_url,
