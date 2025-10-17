@@ -2,6 +2,9 @@ from pydantic import BaseModel, Field
 import operator
 from typing import Annotated, Optional
 from langchain_core.messages import BaseMessage
+from research.log_output.log import log
+import tiktoken
+
 
 
 """
@@ -107,7 +110,7 @@ class WorkflowState(BaseModel):
     final_status: str | None = Field(None, description="最終的なワークフローの状態")
     execution_time: float = Field(0, description="実行にかかった時間（秒）")
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
-    
+
     messages: Annotated[list[BaseMessage], operator.add] = Field(
         default_factory=list, description="LLMとの対話履歴メッセージのリスト")
     # ノードの実行制御フラグ
@@ -171,6 +174,29 @@ class WorkflowState(BaseModel):
     # explanation_generatorで設定されるフィールド
     generate_explanation: Optional[str] = Field(None, description="生成されたGitHubActionsワークフローの解説文")
 
+    # メッセージのトークン数が多すぎる場合に古いメッセージを削除するメソッド
+    def messages_to_llm(self) -> list[BaseMessage]:
+        total_tokens = self.message_token_count()
+        while total_tokens > 30000:
+            # 最も古い修正のHuman+AIメッセージのセットを削除して再計算
+            if len(self.messages) < 5:
+                log("error", f"メッセージのトークン数が3万トークンより{total_tokens}と多いのですが、これ以上削除できるメッセージがありません。処理を中断します。")
+                # プロセスを中断
+                raise Exception(f"メッセージのトークン数{total_tokens}が多すぎて処理を続行できません。")
+            del self.messages[3:5]
+            total_tokens = self.message_token_count()
+
+        return self.messages
+    def count_tokens(self,text: str) -> int:
+        enc = tiktoken.encoding_for_model("gpt-4o")
+        return len(enc.encode(text))
+    
+    def message_token_count(self) -> int:
+        total_tokens = 0
+        for msg in self.messages:
+            total_tokens += self.count_tokens(msg.content)
+        return total_tokens
+    
     def save_messages_to_file(self, filepath: str):
         with open(filepath, "w", encoding="utf-8") as f:
             for msg in self.messages:
