@@ -544,6 +544,39 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
+    def get_file_tree_sub(self, local_path: str) -> RepoInfoResult:
+        """
+        指定したローカルリポジトリのファイルツリー情報をtreeコマンドで取得し、文字列で返す。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+
+        Returns:
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                info (dict|None): {"tree": treeコマンドの出力文字列}
+                message (str): 実行結果の説明メッセージ
+        """
+        if not os.path.exists(local_path):
+            result = RepoInfoResult(status="not_found", info=None, message=f"{local_path} は存在しません。")
+            log(result.status, result.message)
+            return result
+        try:
+            import subprocess
+            tree_output = subprocess.run(
+                ["tree", local_path],
+                capture_output=True, text=True, check=True
+            ).stdout
+            result = RepoInfoResult(
+                status="success",
+                info={"tree": tree_output},
+                message=f"{local_path}のファイルツリー（treeコマンド）を取得しました"
+            )
+        except Exception as e:
+            result = RepoInfoResult(status="error", info=None, message=str(e))
+        log(result.status, result.message)
+        return result
+
     def create_pull_request(self, repo_url: str, head: str, base: str, title: str, body: str = "") -> PullRequestResult:
         """
         指定したリポジトリにプルリクエストを作成する。
