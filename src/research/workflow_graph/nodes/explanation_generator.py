@@ -32,12 +32,12 @@ class ExplanationGenerator:
             model = llm.create_model(
                 model_name=self.model_name,
             )
-            
-            # TODO: 最終の実行結果でプロジェクトエラーがある場合は、その内容も解説に含めた方がいいのでは？
-            # if state.workflow_run_results[-1].parsed_error.project_errors is None:
-            #     project_errors = "プロジェクトのエラーはありません"
-            # else:
-            #     project_errors = state.workflow_run_results[-1].parsed_error.project_errors
+
+            # プロジェクトエラーの取得
+            if state.workflow_run_results[-1].parsed_error.project_errors is None:
+                project_errors = "プロジェクトのエラーはありません"
+            else:
+                project_errors = state.workflow_run_results[-1].parsed_error.project_errors
                 
             prompt = ChatPromptTemplate.from_messages(
             [
@@ -46,6 +46,7 @@ class ExplanationGenerator:
                     "以下のYAMLファイルの内容を初心者でもわかりやすく日本語で解説してください。\n"
                     "この解説はプルリクエストの説明文にそのまま使える内容にしてください。\n"
                     "説明の際には、対象となるコード部分も引用して示しながら解説してください（読者がコードと解説を行き来しなくても理解できるようにするため）。\n"
+                    "プロジェクトのエラーがある場合は最後にその内容についても解説してください。\n"
                     "出力フォーマットは以下の通りにしてください：\n"
                     "1. ワークフロー全体の目的や概要を簡潔に説明\n"
                     "2. 各ジョブ・ステップごとに以下の形式で整理\n"
@@ -53,17 +54,27 @@ class ExplanationGenerator:
                     "   - そのコードの役割・ポイント（箇条書き）\n"
                     "   - 使用されているアクションやコマンドの補足説明\n"
                     "3. 注意点やよくあるミスがあれば補足\n"
+                    "4. プロジェクトエラーがある場合はその内容と対処法の解説\n"
                     "専門用語はできるだけ噛み砕いて説明してください。\n"
                     "【YAMLファイル】\n"
                     "{workflow_text}"
+                    "【プロジェクトエラー】\n"
+                    "{project_errors}"
                 )
             ]
 )
             chain = prompt | model | StrOutputParser()
             
-            input = {"workflow_text": state.generate_workflows[-1].generated_text}
+            input = {
+                "workflow_text": state.generate_workflows[-1].generated_text, 
+                "project_errors":project_errors
+            }
             explanation = chain.invoke(input)
-            log("info", f"LLM{self.model_name}を利用し、ワークフローの説明文を生成しました")
+            if explanation is None or explanation.strip() == "":
+                explanation = "ワークフロー解説文の生成に失敗しました。"
+                log("warning", "ワークフロー解説文の生成に失敗しました。")
+            else:
+                log("info", f"LLM{self.model_name}を利用し、ワークフローの説明文を生成しました")
             
             # 2. Dependabot security updatesの設定方法をTavilyで検索し要約
             retriever = rag.rag_tavily(max_results=3)
@@ -82,7 +93,13 @@ class ExplanationGenerator:
             dependabot_chain = dependabot_prompt | model | StrOutputParser()
             dependabot_summary = dependabot_chain.invoke({"dependabot_info": dependabot_info})
 
-            # 3. ワークフロー解説文の末尾に付加
+            if dependabot_summary is None or dependabot_summary.strip() == "":
+                dependabot_summary = "Dependabot security updatesの設定方法と意義の要約に失敗しました。"
+                log("warning", "Dependabot security updatesの設定方法と意義の要約に失敗しました。")
+            else:
+                log("info", f"LLM{self.model_name}を利用し、Dependabot security updatesの設定方法と意義を要約しました")
+
+            # ワークフロー解説文の末尾に付加
             final_explanation = f"【GitHub Actionsワークフローの解説】\n{explanation}\n\n---\n\n【GitHub Dependabot security updatesの設定方法と意義】\n{dependabot_summary}"
 
         else:
