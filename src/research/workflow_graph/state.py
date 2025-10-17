@@ -184,6 +184,7 @@ class WorkflowState(BaseModel):
                 # プロセスを中断
                 raise Exception(f"メッセージのトークン数{total_tokens}が多すぎて処理を続行できません。")
             del self.messages[3:5]
+            log("info", f"メッセージのトークン数が3万トークンを超えていたため、最も古い修正のHuman+AIメッセージのセットを削除しました。現在のトークン数: {total_tokens}")
             total_tokens = self.message_token_count()
 
         return self.messages
