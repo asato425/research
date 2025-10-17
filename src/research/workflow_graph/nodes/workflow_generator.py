@@ -193,7 +193,7 @@ class WorkflowGenerator:
                     "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
                     "- Lintエラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
-        prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
+        prompt = ChatPromptTemplate.from_messages(state.messages_to_llm() + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
 
