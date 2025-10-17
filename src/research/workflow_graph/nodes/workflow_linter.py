@@ -46,8 +46,6 @@ class WorkflowLinter:
                     lint_name="actionlint",
                     raw_error=actionlint_result.raw_output,
                     parsed_error=parse_result
-                    # コスト削減+あまり意味がなさそうなのでそのまま出す
-                    #parsed_error=actionlint_result.raw_output
                 )
                 lint_result_list.append(actionlint_result)
             else:
@@ -75,8 +73,6 @@ class WorkflowLinter:
                     lint_name="ghalint",
                     raw_error=ghalint_result.raw_output,
                     parsed_error=parse_result
-                    # コスト削減+あまり意味がなさそうなのでそのまま出す
-                    #parsed_error=ghalint_result.raw_output
                 )
                 lint_result_list.append(ghalint_result)
             else:
