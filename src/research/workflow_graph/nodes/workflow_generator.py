@@ -125,7 +125,7 @@ class WorkflowGenerator:
             model_name=self.model_name, 
             output_model=GenerateWorkflow
         )
-        # TODO: ファイル構造が必要かどうかは要検討
+        # TODO: ファイル構造、リポジトリ情報が必要かどうかは要検討
         human_prompt = HumanMessage(
             content=f"以下の条件・情報をもとに、{state.language}プロジェクト向けのGitHub Actionsワークフロー（YAML）を生成してください。\n"
                     "【プロジェクト情報】\n"
@@ -134,13 +134,20 @@ class WorkflowGenerator:
                     # f"{state.file_tree}\n"
                     "- 主要ファイル:\n"
                     f"{"\n".join([f"ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n" for file in state.workflow_required_files])}\n"
-                    "- リポジトリの情報:\n"
-                    f"{state.repo_info}\n"
+                    # "- リポジトリの情報:\n"
+                    # f"{state.repo_info}\n"
                     "【YAML記述ルール】\n"
                     f"{get_yml_rules(state.work_ref)}\n"
                     f"【{state.language}向けベストプラクティス】\n"
                     f"{best_practices}"
         )
+        if state.count_tokens(str(human_prompt.content)) > 20000:
+            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
+            return {
+                "finish_is": True,
+                "final_status": "human_prompt tokens exceed 20000"
+            }
+
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
@@ -193,6 +200,12 @@ class WorkflowGenerator:
                     "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
                     "- Lintエラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
+        if state.count_tokens(str(human_prompt.content)) > 20000:
+            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
+            return {
+                "finish_is": True,
+                "final_status": "human_prompt tokens exceed 20000"
+            }
         prompt = ChatPromptTemplate.from_messages(state.messages_to_llm() + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
@@ -247,6 +260,12 @@ class WorkflowGenerator:
                     "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
                     "- 実行エラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
+        if state.count_tokens(str(human_prompt.content)) > 20000:
+            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
+            return {
+                "finish_is": True,
+                "final_status": "human_prompt tokens exceed 20000"
+            }
         prompt = ChatPromptTemplate.from_messages(state.messages_to_llm() + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
