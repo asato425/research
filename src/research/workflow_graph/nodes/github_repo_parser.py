@@ -28,9 +28,9 @@ class GitHubRepoParser:
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
         llm = LLMTool()
-        
-        # 生成以外のLLMの処理はgpt-4o-miniなどの軽量モデルにするため引数の指定なし
-        parser = ParserTool()
+
+        # TODO: 生成以外のLLMの処理はgpt-4o-miniの軽量モデルにする場合は引数の指定なしにする
+        parser = ParserTool(model_name=state.model_name)
         
 
         # リポジトリ情報の取得
@@ -65,7 +65,7 @@ class GitHubRepoParser:
                 "final_status": "failed to create branch"
             }
 
-        #.githubフォルダの削除
+        #.githubフォルダの削除(存在する場合)
         folder_exists_result = github.folder_exists_in_repo(local_path=local_path, folder_name=".github")
         if folder_exists_result.status == "success":
             delete_github_folder_result = github.delete_folder(
@@ -91,14 +91,35 @@ class GitHubRepoParser:
                     "final_status": "failed to push changes"}
 
         # ファイルツリーの取得
-        file_tree_result = github.get_file_tree(local_path)
-        if file_tree_result.status != "success":
-            log("error", "ファイルツリーの取得に失敗したのでプログラムを終了します")
+        # os.walkを使った場合
+        # file_tree_result = github.get_file_tree(local_path)
+        # if file_tree_result.status != "success":
+        #     log("error", "ファイルツリーの取得に失敗したのでプログラムを終了します")
+        #     return {
+        #         "finish_is": True,
+        #         "final_status": "failed to get file tree"
+        #     }
+        # file_tree = file_tree_result.info
+        # log("info", f"ファイルツリーのトークン数:{state.count_tokens(str(file_tree))}")
+
+        # treeコマンドを使った場合、この方がトークン数が少なくなるのでこちらを利用
+        file_tree_result_sub = github.get_file_tree_sub(local_path)
+        if file_tree_result_sub.status != "success":
+            log("error", "ファイルツリーの取得subに失敗したのでプログラムを終了します")
             return {
                 "finish_is": True,
                 "final_status": "failed to get file tree"
             }
-        file_tree = file_tree_result.info
+        file_tree = file_tree_result_sub.info["tree"]
+        log("info", f"ファイルツリーのトークン数:{state.count_tokens(file_tree)}")
+        
+        # トークン数が多すぎる場合は終了
+        if state.count_tokens(file_tree) > 100000:
+            log("error", "ファイルツリーのトークン数が100000を超えたため、実験ではトークン制限にかかる可能性があるため、プログラムを終了します")
+            return {
+                "finish_is": True,
+                "final_status": "file tree tokens exceed 100000"
+            }
 
         if state.generate_workflow_required_files:
             log("info", "主要ファイルの選定を開始します")
@@ -106,14 +127,12 @@ class GitHubRepoParser:
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "あなたは日本のソフトウェア開発の専門家です。"),
                 ("human", 
-                "以下のプロジェクトのGitHub Actionsワークフロー生成に必要な主要ファイル名を最大{max_required_files}個教えてください。"
+                "以下の{language}プロジェクトのGitHub Actionsワークフローのビルド、テストジョブ生成に必要な主要ファイルを最大{max_required_files}個教えてください。"
                 "ファイル名は必ずファイル構造に存在するものにしてください。また.githubフォルダ内のファイルは除外してください。"
                 "【プロジェクト情報】"
                 "- プロジェクトのローカルパス: {local_path}"
                 "- ファイル構造（ツリー形式）:"
                 "{file_tree}"
-                "- リポジトリの情報:"
-                "{repo_info}"
                 "各RequiredFileには以下の情報を含めてください。"
                 " - name: ファイル名"
                 " - description: ファイルの簡単な説明"
@@ -122,18 +141,24 @@ class GitHubRepoParser:
                 )
             ])
 
-            # チェーンの作成
-            #chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
-            chain = prompt | llm.create_model(model_name="gpt-4o-mini", output_model=WorkflowRequiredFiles)
+            # チェーンの作成、TODO:必要に応じてコスト削減のためモデルを変更
+            chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
 
             # チェーンの実行
             workflow_required_files_result = chain.invoke({
+                "language": repo_info["language"],
                 "max_required_files": state.max_required_files,
                 "local_path": local_path,
                 "file_tree": file_tree,
-                "repo_info": repo_info,
             })
-
+            # 主要ファイル選定の結果の確認
+            if workflow_required_files_result is None or workflow_required_files_result.workflow_required_files is None:
+                log("error", "主要ファイルの選定に失敗したため、プログラムを終了します")
+                return {
+                    "finish_is": True,
+                    "final_status": "failed to generate workflow required files"
+                }
+                
             # 主要ファイルの内容の取得
             for required_file in workflow_required_files_result.workflow_required_files:
                 log("info", f"主要ファイル: {required_file.name} - {required_file.path} - {required_file.description}")
@@ -142,6 +167,13 @@ class GitHubRepoParser:
                     log("error", f"主要ファイルの取得に失敗しました: {required_file.name}")
                 else:
                     required_file.content = get_content_result.info["content"]
+                    
+                    # トークン制限対策: 50000トークンを超える場合は内容を削減
+                    while state.count_tokens(required_file.content) > 50000:
+                        log("warning", f"{required_file.name}の内容が50000トークンを超えているため、内容の10%を削減します")
+                        required_file.content = required_file.content[:int(len(required_file.content)*0.9)]
+                    
+                    # 主要ファイルの内容のパース
                     file_content_parse_result = parser.file_content_parse(required_file.content)
                     if file_content_parse_result is None:
                         log("warning", f"{required_file.name}の内容のパースに失敗したため、パースする前の内容を利用します")
