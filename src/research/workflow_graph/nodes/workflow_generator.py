@@ -189,7 +189,9 @@ class WorkflowGenerator:
                     "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同様のエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintや最適化など)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
                     "- Lintエラーの内容:\n"
                     f"{lint_result.parsed_error}\n"
-                    "注意点：今までに生成されたワークフローと全く同じ内容は生成しないでください\n"
+                    "注意点"
+                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
+                    "- Lintエラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
@@ -241,7 +243,9 @@ class WorkflowGenerator:
                     "これまでのワークフロー生成、エラーの内容の履歴も踏まえ、同様のエラーが複数回確認できるかつビルドやテストに直接関連しない場合(Lintや最適化など)はコメントアウトすることによって対応してください。その際にコメントアウトする理由をコメントとして残してください。\n"
                     "- 実行エラーの内容:\n"
                     f"{exec_result.parsed_error.yml_errors}\n"
-                    "注意点：今までの生成されたワークフローと全く同じ内容は生成しないでください\n"
+                    "注意点"
+                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
+                    "- 実行エラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
