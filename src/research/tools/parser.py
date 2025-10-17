@@ -57,7 +57,7 @@ class ParserTool:
                     ),
                     (
                         "human",
-                        "以下のGitHub Actionsのワークフロー実行結果に基づいてエラーの詳細をエラーの種類に応じて分けて教えてください。\n"
+                        "以下のGitHub Actionsのワークフロー実行結果に基づいてをエラーの種類に応じて分類、要約してください\n"
                         "プロジェクトとymlファイルのどちらでも改善できる可能性のエラーに関してはymlファイルの変更で解消できるエラーとしてください"
                         "ワークフローの実行状態: {status}\n"
                         "ワークフローの実行結果: {conclusion}\n"
@@ -126,9 +126,9 @@ class ParserTool:
             raw_output = raw_output
             # raw_outputがstrの時とjson型の時で処理を変えたい
             if isinstance(raw_output, str):
-                if len(raw_output) > 10000:
-                    log("warning", "raw_outputが1万文字を超えたため、フィルターを適用します")
-                    raw_output = raw_output[:10000]  # LLMのトークン制限を考慮して最初の10000文字だけ利用
+                if len(raw_output) > 1000:
+                    log("warning", "raw_outputが1000文字を超えたため、フィルターを適用します")
+                    raw_output = raw_output[:1000]  # LLMのトークン制限を考慮して最初の1000文字だけ利用
                 else:
                     log("info", f"raw_outputの文字数: {len(raw_output)}のため、そのまま利用します")
                     parse_details = raw_output
@@ -136,13 +136,13 @@ class ParserTool:
                 total = 0
                 for i in range(len(raw_output)):
                     total += self.dict_char_count(raw_output[i])
-                    if total > 10000:
-                        log("warning", f"raw_outputのdictの合計文字数が{total}で1万文字を超えたため、フィルターを適用します")
+                    if total > 1000:
+                        log("warning", f"raw_outputのdictの合計文字数が{total}で1000文字を超えたため、フィルターを適用します")
                         parse_details = raw_output[:i] if i > 0 else raw_output[:1]
                         break
                     parse_details = raw_output[:i+1]
                     if i >= len(raw_output) - 1:
-                        log("info", f"raw_outputのdictの合計文字数が{total}で1万文字を超えなかったため、そのまま利用します")
+                        log("info", f"raw_outputのdictの合計文字数が{total}で1000文字を超えなかったため、そのまま利用します")
                     
         return parse_details
 
@@ -165,9 +165,9 @@ class ParserTool:
         if file_content is None or file_content.strip() == "":
             parse_details = None
         else:
-            if len(file_content) > 500000:
-                log("warning", "file_contentが500000文字を超えたため、最初の500000文字を利用します")
-                file_content = file_content[:500000]
+            if len(file_content) > 50000:
+                log("warning", "file_contentが50000文字を超えたため、最初の50000文字を利用します")
+                file_content = file_content[:50000]
             llm_prompt = ChatPromptTemplate.from_messages(
                 [
                     (
@@ -206,7 +206,7 @@ class ParserTool:
         return total
     def filter(self, log_:str):
         #ログをフィルターする関数
-        # フィルターした結果1万文字を超えたらcontextを小さくする
+        # フィルターした結果10000文字を超えたらcontextを小さくする
         context = 5
         for _ in range(6):
             filtered_log = self.remove_timestamps(self.extract_error_context(log_, context))
@@ -219,7 +219,7 @@ class ParserTool:
         result = len(filtered_log)/len(log_) * 100
         log("info", f"実行ログの削減できた割合: {100-int(result)}%")
         if len(filtered_log) >= 10000:
-            log("warning", "フィルター後のログが1万文字を超えているため、最初の1万文字に限定します")
+            log("warning", "フィルター後のログが10000文字を超えているため、最初の10000文字に限定します")
             filtered_log = filtered_log[:10000]
 
         return filtered_log
