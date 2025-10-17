@@ -165,9 +165,6 @@ class ParserTool:
         if file_content is None or file_content.strip() == "":
             parse_details = None
         else:
-            if len(file_content) > 50000:
-                log("warning", "file_contentが50000文字を超えたため、最初の50000文字を利用します")
-                file_content = file_content[:50000]
             llm_prompt = ChatPromptTemplate.from_messages(
                 [
                     (
