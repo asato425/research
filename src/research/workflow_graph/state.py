@@ -68,8 +68,8 @@ class LintResult(BaseModel):
     """
     status: str = Field(..., description="Lint結果の状態")
     lint_name: Optional[str] = Field(None, description="使用したLinterの名前（例: actionlint, ghalint）")
-    raw_error: str | list = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
-    parsed_error: str | list = Field(None, description="LLM等で要約したLintエラー")
+    raw_error: Optional[str | list] = Field(None, description="Lintエラーの原文（ツール出力そのまま）")
+    parsed_error: Optional[str | list] = Field(None, description="LLM等で要約したLintエラー")
 
     def summary(self) -> str:
         return f"ステータス: {self.status}\n原文: 省略\n要約: {self.parsed_error or 'なし'}"
@@ -150,7 +150,7 @@ class WorkflowState(BaseModel):
     # github_repo_parserで設定されるフィールド
     local_path: Optional[str] = Field(None, description="リポジトリのクローン先のローカルパス")
     repo_info: dict = Field(None, description="リポジトリ情報")
-    file_tree: dict = Field(None, description="リポジトリのファイルツリー")
+    file_tree: dict | str = Field(None, description="リポジトリのファイルツリー")
     language: Optional[str] = Field(None, description="対象のプロジェクトに使用されている主要プログラミング言語")
     workflow_required_files: Annotated[list[RequiredFile], operator.add] = Field(
         default_factory=list, description="生成されたワークフローで必要なファイルのリスト"
