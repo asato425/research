@@ -50,7 +50,7 @@ class WorkflowGenerator:
             return {
                 "finish_is": True,
                 "final_status": "failed to generate workflow",
-                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text)],
+                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text if (result and result.generated_text) else "生成されたワークフローはありません")],
                 "generate_workflows": [result],
                 "prev_node": "workflow_generator",
                 "node_history": ["workflow_generator"],
