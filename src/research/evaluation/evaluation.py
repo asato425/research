@@ -21,9 +21,10 @@ BEST_PRACTICES_ENABLE_REUSE = True
 
 # モデルとエージェントの設定
 """
-MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
+MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"gpt-5"、"claude"を指定できます。
 """
 MODEL_NAME = "gemini-2.5-pro"
+TEMPERATURE = 0.0
 
 now_str = datetime.now().strftime("%m%d_%H%M")
 # コマンドライン引数のデフォルト値
@@ -48,6 +49,7 @@ def evaluate(repo_url: str, message_file_name: str) -> WorkflowState | None:
             repo_url=repo_url,
             message_file_name=message_file_name,
             model_name=MODEL_NAME,
+            temperature=TEMPERATURE,
             run_github_parser=RUN_GITHUB_REPO_PARSER,
             run_workflow_generator=RUN_WORKFLOW_GENERATOR and RUN_GITHUB_REPO_PARSER,
             run_linter=RUN_LINTER and RUN_WORKFLOW_GENERATOR,
@@ -83,8 +85,8 @@ def evaluate_multiple(repos: dict[int, str]) -> list[WorkflowState]:
         print(f"===== リポジトリ {i}/{len(repos)}: {repo} の評価が完了 =====\n\n")
         # リポジトリごとにクールダウン
         if i < len(repos):
-            log("info","[COOLDOWN] 60秒待機中...")
-            time.sleep(60)
+            log("info","[COOLDOWN] 1秒待機中...")
+            time.sleep(1)
     return states
 
 # 複数のWorkflowStateをエクセルに保存する関数
@@ -154,38 +156,38 @@ def main():
         "python": {
             1: "https://github.com/asato425/public-apis",
             2: "https://github.com/asato425/Python-1",
-            3: "https://github.com/asato425/transformers",
-            4: "https://github.com/asato425/youtube-dl",
-            5: "https://github.com/asato425/yt-dlp",
-            6: "https://github.com/asato425/langchain-1",
-            7: "https://github.com/asato425/thefuck",
+            3: "https://github.com/asato425/stable-diffusion-webui",
+            4: "https://github.com/asato425/transformers",
+            5: "https://github.com/asato425/youtube-dl",
+            6: "https://github.com/asato425/yt-dlp",
+            7: "https://github.com/asato425/langchain-1",
             8: "https://github.com/asato425/ComfyUI",
             9: "https://github.com/asato425/fastapi",
-            10: "https://github.com/asato425/whisper"
+            10: "https://github.com/asato425/whisper",
         },
         "java": {
             1: "https://github.com/asato425/java-design-patterns",
             2: "https://github.com/asato425/mall",
-            3: "https://github.com/asato425/spring-boot",
-            4: "https://github.com/asato425/elasticsearch",
-            5: "https://github.com/asato425/Java-1",
-            6: "https://github.com/asato425/spring-framework",
-            7: "https://github.com/asato425/guava",
-            8: "https://github.com/asato425/RxJava",
-            9: "https://github.com/asato425/termux-app",
-            10: "https://github.com/asato425/jadx",
+            3: "https://github.com/asato425/Java-1",
+            4: "https://github.com/asato425/guava",
+            5: "https://github.com/asato425/RxJava",
+            6: "https://github.com/asato425/termux-app",
+            7: "https://github.com/asato425/jadx",
+            8: "https://github.com/asato425/JeecgBoot",
+            9: "https://github.com/asato425/MPAndroidChart",
+            10: "https://github.com/asato425/NewPipe",
         },
         "javascript": {
             1: "https://github.com/asato425/javascript-algorithms",
             2: "https://github.com/asato425/javascript",
-            3: "https://github.com/asato425/create-react-app",
-            4: "https://github.com/asato425/github-readme-stats",
-            5: "https://github.com/asato425/express",
-            6: "https://github.com/asato425/webpack",
-            7: "https://github.com/asato425/lodash",
-            8: "https://github.com/asato425/jquery",
-            9: "https://github.com/asato425/angular",
-            10: "https://github.com/asato425/anything-llm",
+            3: "https://github.com/asato425/axios",
+            4: "https://github.com/asato425/create-react-app",
+            5: "https://github.com/asato425/github-readme-stats",
+            6: "https://github.com/asato425/express",
+            7: "https://github.com/asato425/bruno",
+            8: "https://github.com/asato425/anime",
+            9: "https://github.com/asato425/lodash",
+            10: "https://github.com/asato425/jquery",
         },
         # "c++": {
         # },
@@ -199,14 +201,14 @@ def main():
         # },
         
     }
-    # for language, repos in language_repo_dict.items():
-    #     print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
-    #     repositories_to_evaluate = {i: url for i, url in repos.items()}
-    #     states = evaluate_multiple(repositories_to_evaluate)
-    #     save_states_to_excel(states, language)
-    #     print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
+    for language, repos in language_repo_dict.items():
+        print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
+        repositories_to_evaluate = {i: url for i, url in repos.items()}
+        states = evaluate_multiple(repositories_to_evaluate)
+        save_states_to_excel(states, language)
+        print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
 
-    delete_remote_repo(language_repo_dict) # フォークしたリポジトリを削除する場合はコメントアウトを外す
+    #delete_remote_repo(language_repo_dict) # フォークしたリポジトリを削除する場合はコメントアウトを外す
     
     # 終了時間の記録とログ出力
     elapsed = time.time() - start_time
