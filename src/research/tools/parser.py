@@ -14,7 +14,7 @@ class LogParseResult(BaseModel):
     project_errors: str | None = Field(None, description="その他プロジェクト固有のエラーの説明、ない場合はNoneとしてください")
     unknown_errors: str | None = Field(None, description="不明なエラーの説明、ない場合はNoneとしてください")
 class ParserTool:
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "gpt-5-mini"):
         """
         Returns:
             None
