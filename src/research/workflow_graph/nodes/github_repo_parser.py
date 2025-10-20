@@ -5,11 +5,11 @@
 from research.log_output.log import log
 from research.tools.github import GitHubTool
 from research.tools.llm import LLMTool
-from research.tools.rag import RAGTool
+#from research.tools.rag import RAGTool
 from research.tools.parser import ParserTool
 from research.workflow_graph.state import WorkflowState, WorkflowRequiredFiles
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+#from langchain_core.output_parsers import StrOutputParser
 import time
 from datetime import datetime
 
@@ -30,7 +30,7 @@ class GitHubRepoParser:
         log("info", "これからリポジトリ情報を取得します")
         github = GitHubTool()
         llm = LLMTool()
-        rag = RAGTool()
+        #rag = RAGTool()
         # TODO: 生成以外のLLMの処理はgpt-4o-miniの軽量モデルにする場合は引数の指定なしにする
         parser = ParserTool(model_name=state.model_name)
         
@@ -199,27 +199,28 @@ class GitHubRepoParser:
             workflow_required_files = []
         
         # RAGを利用してTavilyから情報を取得し要約
-        retriever = rag.rag_tavily(max_results=3)
-        query = f"GitHub Actions上で{repo_info['language']}プロジェクトをビルド、テストするための手順"
-        search_docs = retriever.invoke(query)
+        web_summary = "なし"
+        # retriever = rag.rag_tavily(max_results=3)
+        # query = f"GitHub Actions上で{repo_info['language']}プロジェクトをビルド、テストするための手順"
+        # search_docs = retriever.invoke(query)
         # 検索結果をまとめてLLMで要約
-        web_info = "\n\n".join([doc.page_content for doc in search_docs])
-        web_prompt = ChatPromptTemplate.from_messages([
-            ("system", "あなたはGitHub Actionsのエキスパートです。"),
-            ("human",
-                "以下の情報をもとに、GitHub Actions上でのビルド・テスト手順を5000文字以下で要約してください。Webページにそのような情報が含まれていない場合は、Noneを出力してください。\n"
-                "【検索結果】\n"
-                "{web_info}"
-            )
-        ])
-        web_chain = web_prompt | llm.create_model(model_name=self.model_name) | StrOutputParser()
-        web_summary = web_chain.invoke({"build_info": web_info})
+        # web_info = "\n\n".join([doc.page_content for doc in search_docs])
+        # web_prompt = ChatPromptTemplate.from_messages([
+        #     ("system", "あなたはGitHub Actionsのエキスパートです。"),
+        #     ("human",
+        #         "以下の情報をもとに、GitHub Actions上でのビルド・テスト手順を5000文字以下で要約してください。Webページにそのような情報が含まれていない場合は、Noneを出力してください。\n"
+        #         "【検索結果】\n"
+        #         "{web_info}"
+        #     )
+        # ])
+        # web_chain = web_prompt | llm.create_model(model_name=self.model_name) | StrOutputParser()
+        # web_summary = web_chain.invoke({"web_info": web_info})
 
-        if web_summary is None or web_summary.strip() == "":
-            web_summary = "なし"
-            log("warning", "GitHub Actions上でのビルド手順の要約に失敗しました。")
-        else:
-            log("info", f"LLM{self.model_name}を利用し、GitHub Actions上でのビルド手順を要約しました")
+        # if web_summary is None or web_summary.strip() == "":
+        #     web_summary = "なし"
+        #     log("warning", "GitHub Actions上でのビルド手順の要約に失敗しました。")
+        # else:
+        #     log("info", f"LLM{self.model_name}を利用し、GitHub Actions上でのビルド手順を要約しました")
 
         # 終了時間の記録とログ出力
         elapsed = time.time() - start_time
