@@ -110,6 +110,7 @@ class WorkflowState(BaseModel):
     final_status: str | None = Field(None, description="最終的なワークフローの状態")
     execution_time: float = Field(0, description="実行にかかった時間（秒）")
     model_name : str = Field("gemini", description="使用するLLMのモデル名")
+    temperature: float = Field(0.0, description="LLMの温度パラメータ")
 
     messages: Annotated[list[BaseMessage], operator.add] = Field(
         default_factory=list, description="LLMとの対話履歴メッセージのリスト")
@@ -155,6 +156,7 @@ class WorkflowState(BaseModel):
     workflow_required_files: Annotated[list[RequiredFile], operator.add] = Field(
         default_factory=list, description="生成されたワークフローで必要なファイルのリスト"
     )
+    web_summary: Optional[str] = Field(None, description="web検索によるプロジェクトのビルド、テスト手順の要約")
 
     # workflow_generatorで設定されるフィールド
     generate_workflows: Annotated[list[GenerateWorkflow], operator.add] = Field(
@@ -189,7 +191,7 @@ class WorkflowState(BaseModel):
 
         return self.messages
     def count_tokens(self,text: str) -> int:
-        enc = tiktoken.encoding_for_model("gpt-4o")
+        enc = tiktoken.encoding_for_model("gpt-5")
         return len(enc.encode(text))
     
     def message_token_count(self) -> int:
