@@ -141,11 +141,11 @@ class WorkflowGenerator:
                     f"【{state.language}向けベストプラクティス】\n"
                     f"{best_practices}"
         )
-        if state.count_tokens(str(human_prompt.content)) > 20000:
-            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
+        if state.count_tokens(str(human_prompt.content)) > 30000:
+            log("warning", "human_promptが30000トークンを超えたため、実験ではプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "human_prompt tokens exceed 20000"
+                "final_status": "human_prompt tokens exceed 30000"
             }
 
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
