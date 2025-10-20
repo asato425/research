@@ -22,6 +22,7 @@ BEST_PRACTICES_ENABLE_REUSE = True
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 """
 MODEL_NAME = "gpt-5"
+TEMPERATURE = 0.0
 
 # コマンドライン引数のデフォルト値
 WORK_REF = "work/"+MODEL_NAME  # 作業用ブランチ名
@@ -91,6 +92,7 @@ def main():
         repo_url=args.repo_url,
         # LLMの設定
         model_name=MODEL_NAME,
+        temperature=TEMPERATURE,
         # ノードの実行制御フラグ
         run_github_parser=RUN_GITHUB_REPO_PARSER,
         run_workflow_generator=RUN_WORKFLOW_GENERATOR and RUN_GITHUB_REPO_PARSER,
