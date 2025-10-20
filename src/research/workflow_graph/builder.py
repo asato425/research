@@ -161,6 +161,7 @@ class WorkflowBuilder:
             best_practices_enable_reuse: bool,
             message_file_name: str = "messages.txt",
             model_name: str = "gemini",
+            temperature: float = 0.0,
             work_ref: str = "test", yml_file_name: str = "ci.yml", 
             max_required_files: int = 5, loop_count_max: int = 5, 
             best_practice_num: int = 10) -> WorkflowState:
@@ -196,6 +197,7 @@ class WorkflowBuilder:
         # 初期状態の設定
         initial_state = WorkflowState(
             model_name=model_name,
+            temperature=temperature,
             message_file_name=message_file_name,
             messages=[SystemMessage(content="あなたは日本のソフトウェア開発の専門家です。GitHub Actionsのワークフロー設計・運用に精通しています。")],
             repo_url=repo_url,
