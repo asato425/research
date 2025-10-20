@@ -198,29 +198,29 @@ def is_build_test_repo(repo_full_name: str):
             break
 
     if has_build_file and has_test_file:
-        print(f"[OK] {repo_full_name}: ビルド設定とテストが確認されました。")
+        #print(f"[OK] {repo_full_name}: ビルド設定とテストが確認されました。")
         return True
     elif has_build_file:
-        print(f"[INFO] {repo_full_name}: ビルド設定ファイルのみ確認されました。")
+        #print(f"[INFO] {repo_full_name}: ビルド設定ファイルのみ確認されました。")
         return False
     elif has_test_file:
-        print(f"[INFO] {repo_full_name}: テスト関連ファイルのみ確認されました。")
+        #print(f"[INFO] {repo_full_name}: テスト関連ファイルのみ確認されました。")
         return False 
     else:
-        print(f"[NG] {repo_full_name}: ビルド設定・テスト関連ファイルが見つかりません。")
+        #print(f"[NG] {repo_full_name}: ビルド設定・テスト関連ファイルが見つかりません。")
         return False
 
 
 def main():
     #languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
-    languages = ["Python", "Java", "JavaScript"]
-    #languages = ["Python"]  # テスト用に1言語に絞る
+    #languages = ["Python", "Java", "JavaScript"]
+    languages = ["Python"]  # テスト用に1言語に絞る
     star_threshold = 10000
-    pushed_after = "2024-01-01"
-    main_lang_threshold = 0.9
+    pushed_after = "2024-10-01"
+    main_lang_threshold = 0.8
     # max_file_count = 1000          # 最大ファイル数
     # max_root_folder_count = 50     # 最大ルートフォルダ数
-    repo_num = 10                    # 各言語ごとに取得したいリポジトリ数
+    repo_num = 30                   # 各言語ごとに取得したいリポジトリ数
     repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
