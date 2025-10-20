@@ -179,14 +179,14 @@ class WorkflowState(BaseModel):
     # メッセージのトークン数が多すぎる場合に古いメッセージを削除するメソッド
     def messages_to_llm(self) -> list[BaseMessage]:
         total_tokens = self.message_token_count()
-        while total_tokens > 30000:
+        while total_tokens > 100000:
             # 最も古い修正のHuman+AIメッセージのセットを削除して再計算
             if len(self.messages) < 5:
-                log("error", f"メッセージのトークン数が3万トークンより{total_tokens}と多いのですが、これ以上削除できるメッセージがありません。処理を中断します。")
+                log("error", f"メッセージのトークン数が10万トークンより{total_tokens}と多いのですが、これ以上削除できるメッセージがありません。処理を中断します。")
                 # プロセスを中断
                 raise Exception(f"メッセージのトークン数{total_tokens}が多すぎて処理を続行できません。")
             del self.messages[3:5]
-            log("info", f"メッセージのトークン数が3万トークンを超えていたため、最も古い修正のHuman+AIメッセージのセットを削除しました。現在のトークン数: {total_tokens}")
+            log("info", f"メッセージのトークン数が10万トークンを超えていたため、最も古い修正のHuman+AIメッセージのセットを削除しました。現在のトークン数: {total_tokens}")
             total_tokens = self.message_token_count()
 
         return self.messages
