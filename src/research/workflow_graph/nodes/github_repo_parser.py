@@ -116,8 +116,8 @@ class GitHubRepoParser:
         log("info", f"ファイルツリーのトークン数:{state.count_tokens(file_tree)}")
         
         # トークン数が多すぎる場合は終了
-        if state.count_tokens(file_tree) > 100000:
-            log("error", "ファイルツリーのトークン数が100000を超えたため、実験ではトークン制限にかかる可能性があるため、プログラムを終了します")
+        if state.count_tokens(file_tree) > 200000:
+            log("error", "ファイルツリーのトークン数が200000を超えたため、実験ではトークン制限にかかる可能性があるため、プログラムを終了します")
             return {
                 "finish_is": True,
                 "final_status": "file tree tokens exceed 100000"
@@ -170,9 +170,9 @@ class GitHubRepoParser:
                 else:
                     required_file.content = get_content_result.info["content"]
                     
-                    # トークン制限対策: 50000トークンを超える場合は内容を削減
-                    while state.count_tokens(required_file.content) > 50000:
-                        log("warning", f"{required_file.name}の内容が50000トークンを超えているため、内容の10%を削減します")
+                    # トークン制限対策: 100000トークンを超える場合は内容を削減
+                    while state.count_tokens(required_file.content) > 100000:
+                        log("warning", f"{required_file.name}の内容が100000トークンを超えているため、内容の10%を削減します")
                         required_file.content = required_file.content[:int(len(required_file.content)*0.9)]
                     
                     # 主要ファイルの内容のパース
