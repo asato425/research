@@ -200,23 +200,23 @@ class GitHubRepoParser:
         
         # RAGを利用してTavilyから情報を取得し要約
         retriever = rag.rag_tavily(max_results=3)
-        query = f"GitHub Actions上で{repo_info['language']}プロジェクト'{state.repo_url}'をビルドするための手順"
+        query = f"GitHub Actions上で{repo_info['language']}プロジェクトをビルド、テストするための手順"
         search_docs = retriever.invoke(query)
         # 検索結果をまとめてLLMで要約
-        build_info = "\n\n".join([doc.page_content for doc in search_docs])
-        build_prompt = ChatPromptTemplate.from_messages([
+        web_info = "\n\n".join([doc.page_content for doc in search_docs])
+        web_prompt = ChatPromptTemplate.from_messages([
             ("system", "あなたはGitHub Actionsのエキスパートです。"),
             ("human",
-                "以下の情報をもとに、GitHub Actions上でのビルド手順を5000文字以下で要約してください。Webページにそのような情報が含まれていない場合は、Noneを出力してください。\n"
+                "以下の情報をもとに、GitHub Actions上でのビルド・テスト手順を5000文字以下で要約してください。Webページにそのような情報が含まれていない場合は、Noneを出力してください。\n"
                 "【検索結果】\n"
-                "{build_info}"
+                "{web_info}"
             )
         ])
-        build_chain = build_prompt | llm.create_model(model_name=self.model_name) | StrOutputParser()
-        build_summary = build_chain.invoke({"build_info": build_info})
+        web_chain = web_prompt | llm.create_model(model_name=self.model_name) | StrOutputParser()
+        web_summary = web_chain.invoke({"build_info": web_info})
 
-        if build_summary is None or build_summary.strip() == "":
-            build_summary = "なし"
+        if web_summary is None or web_summary.strip() == "":
+            web_summary = "なし"
             log("warning", "GitHub Actions上でのビルド手順の要約に失敗しました。")
         else:
             log("info", f"LLM{self.model_name}を利用し、GitHub Actions上でのビルド手順を要約しました")
@@ -232,6 +232,7 @@ class GitHubRepoParser:
             "repo_info": repo_info,
             "language": repo_info["language"],
             "workflow_required_files": workflow_required_files,
+            "web_summary": web_summary,
             "prev_node": "github_repo_parser",
             "node_history": ["github_repo_parser"],
             "final_status": "github_parse_success",
