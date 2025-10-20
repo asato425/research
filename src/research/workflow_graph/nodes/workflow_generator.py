@@ -123,6 +123,7 @@ class WorkflowGenerator:
         
         model = llm.create_model(
             model_name=self.model_name, 
+            temperature=state.temperature,
             output_model=GenerateWorkflow
         )
         # TODO: ファイル構造、リポジトリ情報が必要かどうかは要検討
@@ -136,6 +137,8 @@ class WorkflowGenerator:
                     f"{"\n".join([f"ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n" for file in state.workflow_required_files])}\n"
                     # "- リポジトリの情報:\n"
                     # f"{state.repo_info}\n"
+                    "- Web検索による{state.language}プロジェクトのビルド、テスト手順の要約:\n"
+                    f"{state.web_summary}\n"
                     "【YAML記述ルール】\n"
                     f"{get_yml_rules(state.work_ref)}\n"
                     f"【{state.language}向けベストプラクティス】\n"
@@ -188,6 +191,7 @@ class WorkflowGenerator:
         
         model = llm.create_model(
             model_name=self.model_name, 
+            temperature=state.temperature,
             output_model=GenerateWorkflow
         )
         
@@ -248,6 +252,7 @@ class WorkflowGenerator:
         
         model = llm.create_model(
             model_name=self.model_name, 
+            temperature=state.temperature,
             output_model=GenerateWorkflow
         )
 
