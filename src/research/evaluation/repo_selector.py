@@ -212,15 +212,15 @@ def is_build_test_repo(repo_full_name: str):
 
 
 def main():
-    #languages = ["Python", "Java", "JavaScript", "C", "C++", "C#", "Go", "Ruby", "Rust"]
-    #languages = ["Python", "Java", "JavaScript"]
-    languages = ["Python"]  # テスト用に1言語に絞る
+    #languages = ["Python", "Java", "JavaScript", "C", "Go", "Ruby"]
+    languages = ["Python", "Java", "JavaScript"]
+    #languages = ["Python"]  # テスト用に1言語に絞る
     star_threshold = 10000
     pushed_after = "2024-10-01"
     main_lang_threshold = 0.8
     # max_file_count = 1000          # 最大ファイル数
     # max_root_folder_count = 50     # 最大ルートフォルダ数
-    repo_num = 30                   # 各言語ごとに取得したいリポジトリ数
+    repo_num = 50                   # 各言語ごとに取得したいリポジトリ数
     repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
