@@ -10,7 +10,7 @@ import time
 このモジュールはワークフローの実行を担当します。
 """
 
-EXECUTE_LIMIT = 12
+EXECUTE_LIMIT = 4 # ワークフローの実行待機の最大回数(5分*4回=20分)
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
