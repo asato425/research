@@ -119,7 +119,7 @@ class WorkflowGenerator:
             best_practices = get_yml_best_practices(state)
         else:
             log("info", "ベストプラクティスの取得はスキップされました")
-            best_practices = ""
+            best_practices = "なし"
         
         model = llm.create_model(
             model_name=self.model_name, 
