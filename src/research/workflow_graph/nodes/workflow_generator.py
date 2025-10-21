@@ -142,7 +142,9 @@ class WorkflowGenerator:
                     "【YAML記述ルール】\n"
                     f"{get_yml_rules(state.work_ref)}\n"
                     f"【{state.language}向けベストプラクティス】\n"
-                    f"{best_practices}"
+                    f"{best_practices}\n"
+                    "【注意事項】\n"
+                    "- 提供している情報から生成が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
         )
         if state.count_tokens(str(human_prompt.content)) > 30000:
             log("warning", "human_promptが30000トークンを超えたため、実験ではプログラムを終了します")
