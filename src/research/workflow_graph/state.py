@@ -192,7 +192,7 @@ class WorkflowState(BaseModel):
         return self.messages
     def count_tokens(self,text: str) -> int:
         enc = tiktoken.encoding_for_model("gpt-5")
-        return len(enc.encode(text))
+        return len(enc.encode(text, disallowed_special=()))
     
     def message_token_count(self) -> int:
         total_tokens = 0
