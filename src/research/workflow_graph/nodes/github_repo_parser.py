@@ -116,8 +116,8 @@ class GitHubRepoParser:
         log("info", f"ファイルツリーのトークン数:{state.count_tokens(file_tree)}")
         
         # トークン数が多すぎる場合は終了
-        if state.count_tokens(file_tree) > 200000:
-            log("error", "ファイルツリーのトークン数が200000を超えたため、実験ではトークン制限にかかる可能性があるため、プログラムを終了します")
+        if state.count_tokens(file_tree) > 100000:
+            log("error", "ファイルツリーのトークン数が100000を超えたため、実験ではトークン制限にかかる可能性があるため、プログラムを終了します")
             return {
                 "finish_is": True,
                 "final_status": "file tree tokens exceed 100000"
