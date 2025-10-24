@@ -217,9 +217,9 @@ class ParserTool:
         log("info", f"フィルター後のログの文字数: {len(filtered_log)}")
         result = len(filtered_log)/len(log_) * 100
         log("info", f"実行ログの削減できた割合: {100-int(result)}%")
-        if len(filtered_log) >= 10000:
-            log("warning", "フィルター後のログが10000文字を超えているため、最初の10000文字に限定します")
-            filtered_log = filtered_log[:10000]
+        if len(filtered_log) >= 50000:
+            log("warning", "フィルター後のログが50000文字を超えているため、最初の50000文字に限定します")
+            filtered_log = filtered_log[:50000]
 
         return filtered_log
     
