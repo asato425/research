@@ -41,6 +41,7 @@ class WorkflowGenerator:
             result = GenerateWorkflow(
                 status="success",
                 generated_text="",
+                thought="Workflow Generatorはスキップされました",
                 tokens_used=0
             )
             human_prompt = HumanMessage(content="Workflow Generatorはスキップされました")
@@ -50,7 +51,11 @@ class WorkflowGenerator:
             return {
                 "finish_is": True,
                 "final_status": "failed to generate workflow",
-                "messages": [human_prompt, AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+result.generated_text if (result and result.generated_text) else "生成されたワークフローはありません")],
+                "messages": [human_prompt, 
+                             AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+
+                                       result.generated_text if (result and result.generated_text) else "生成されたワークフローはありません"+
+                                       "LLMの思考過程：\n"+ (result.thought if (result and result.thought) else "なし")
+                                      )],
                 "generate_workflows": [result],
                 "prev_node": "workflow_generator",
                 "node_history": ["workflow_generator"],
@@ -145,6 +150,7 @@ class WorkflowGenerator:
                     f"{best_practices}\n"
                     "【注意事項】\n"
                     "- 提供している情報から生成が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
+                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
         )
         if state.count_tokens(str(human_prompt.content)) > 30000:
             log("warning", "human_promptが30000トークンを超えたため、実験ではプログラムを終了します")
@@ -203,8 +209,9 @@ class WorkflowGenerator:
                     "- Lintエラーの内容:\n"
                     f"{lint_result.parsed_error}\n"
                     "注意点"
-                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
+                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。\n"
                     "- Lintエラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
+                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
         )
         if state.count_tokens(str(human_prompt.content)) > 20000:
             log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
@@ -264,8 +271,9 @@ class WorkflowGenerator:
                     "- 実行エラーの内容:\n"
                     f"{exec_result.parsed_error.yml_errors}\n"
                     "注意点"
-                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。"
+                    "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。\n"
                     "- 実行エラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
+                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
         )
         if state.count_tokens(str(human_prompt.content)) > 20000:
             log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
