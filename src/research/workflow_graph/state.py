@@ -53,6 +53,7 @@ class GenerateWorkflow(BaseModel):
     ワークフロー生成のためのPydanticモデル。
     """
     status: str = Field(..., description="ワークフローの生成結果の状態、生成に成功したらsuccess、失敗したらfail")
+    thought: Optional[str] = Field(None, description="LLMのワークフローを生成する際の思考過程")
     generated_text: Optional[str] = Field(None, description="生成されたテキスト")
 
     def summary(self) -> str:
