@@ -223,7 +223,6 @@ def get_latest_workflow_logs(req: WorkflowRequest):
                         with z.open(name) as f:
                             try:
                                 content = f.read().decode(errors="ignore")
-                                # TODO: ログの内容からエラーに関する部分だけLLMで抽出する処理を追加すると良い、現在の実装ではエラー内容が1万文字に収まらないと修正できない(今後の課題)
                                 log_texts.append(f"===== {name} =====\n{content}")
                                 # ファイルとして保存
                                 # file_path = os.path.join(log_dir, name.replace("/", "_"))
