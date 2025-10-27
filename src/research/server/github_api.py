@@ -145,6 +145,108 @@ def dispatch_workflow(req: WorkflowDispatchRequest):
             return WorkflowDispatchResponse(status="error", message=str(e))
 
 
+@app.post("/workflow/latest_old", response_model=WorkflowResponse)
+def get_latest_workflow_logs_old(req: WorkflowRequest):
+    import os
+    # 環境変数からGitHubアクセストークンを取得
+    if not is_github_token_set():
+        return WorkflowResponse(status="error", message="GITHUB_TOKENがセットされていません", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    # URLからowner/repo名を抽出
+    import re
+    m = re.match(r"https://github.com/([\w\-]+)/([\w\-]+)", req.repo_url)
+    if not m:
+        return WorkflowResponse(status="error", message="リポジトリURLの形式が不正です", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+    owner, repo = m.group(1), m.group(2)
+    url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=10"
+    try:
+        poll_count = 0
+        found = False
+        run = None
+        # 最大60回(=最大5分)までポーリング
+        # TODO: テストのため60を1に変更している。本番では60に戻すこと
+        while poll_count < 1:
+            resp = requests.get(url, headers=headers)
+            data = resp.json()
+            if "workflow_runs" not in data or not data["workflow_runs"]:
+                time.sleep(5)
+                poll_count += 1
+                continue
+            # head_shaが一致するrunを探す
+            for r in data["workflow_runs"]:
+                if r.get("head_sha") == req.commit_sha:
+                    run = r
+                    found = True
+                    break
+            if found:
+                # 進行中なら完了まで待機
+                while run["status"] in ("in_progress", "queued", "pending") and poll_count < 60:
+                    time.sleep(5)
+                    resp = requests.get(url, headers=headers)
+                    data = resp.json()
+                    # head_shaが一致するrunを再取得
+                    run = None
+                    for r in data["workflow_runs"]:
+                        if r.get("head_sha") == req.commit_sha:
+                            run = r
+                            break
+                    if run is None:
+                        break
+                    poll_count += 1
+                break
+            else:
+                # head_sha一致するrunがまだ出てこない場合は少し待つ
+                time.sleep(5)
+                poll_count += 1
+        if not run:
+            return WorkflowResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+        failure_reason = None
+        #失敗時はlogs_urlからログを取得し、そのままfailure_reasonに格納（LLMで抽出するため）
+        if run["conclusion"] == "failure" and run.get("logs_url"):
+            try:
+                logs_resp = requests.get(run["logs_url"], headers=headers)
+                if logs_resp.status_code == 200:
+                    import zipfile
+                    import io
+                    import os
+                    z = zipfile.ZipFile(io.BytesIO(logs_resp.content))
+                    log_texts = []
+                    log_dir = os.path.join(os.getcwd(), "log")
+                    os.makedirs(log_dir, exist_ok=True)
+                    for name in z.namelist():
+                        if not ("test" in name.lower() or "run" in name.lower()):
+                            #continue
+                            pass
+                        with z.open(name) as f:
+                            try:
+                                content = f.read().decode(errors="ignore")
+                                log_texts.append(f"===== {name} =====\n{content}")
+                                # ファイルとして保存
+                                # file_path = os.path.join(log_dir, name.replace("/", "_"))
+                                # with open(file_path, "w", encoding="utf-8", errors="ignore") as out_f:
+                                #     out_f.write(content)
+                            except Exception:
+                                continue
+                    failure_reason = "\n\n".join(log_texts) if log_texts else "(No test/run logs found)"
+                else:
+                    failure_reason = f"Failed to fetch logs: {logs_resp.status_code}"
+            except Exception as ex:
+                failure_reason = f"Log parse error: {ex}"
+        return WorkflowResponse(
+            status=run["status"],
+            message="ワークフロー結果取得成功" if run["status"] == "completed" else "ワークフロー結果が取得できませんでした",
+            conclusion=run["conclusion"],
+            html_url=run["html_url"],
+            logs_url=run["logs_url"],
+            failure_reason=failure_reason
+        )
+    except Exception as e:
+        return WorkflowResponse(status="error", message=str(e), conclusion=None, html_url=None, logs_url=None, failure_reason=None)
+
 @app.post("/workflow/latest", response_model=WorkflowResponse)
 def get_latest_workflow_logs(req: WorkflowRequest):
     import os
@@ -162,7 +264,7 @@ def get_latest_workflow_logs(req: WorkflowRequest):
     if not m:
         return WorkflowResponse(status="error", message="リポジトリURLの形式が不正です", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
     owner, repo = m.group(1), m.group(2)
-    url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=5"
+    url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=10"
     try:
         poll_count = 0
         found = False
@@ -205,34 +307,63 @@ def get_latest_workflow_logs(req: WorkflowRequest):
             return WorkflowResponse(status="not_found", message="commit_shaに一致するワークフローが見つかりませんでした", conclusion=None, html_url=None, logs_url=None, failure_reason=None)
         failure_reason = None
         # 失敗時はlogs_urlからログを取得し、そのままfailure_reasonに格納（LLMで抽出するため）
-        if run["conclusion"] == "failure" and run.get("logs_url"):
+        if run["conclusion"] == "failure":
             try:
-                logs_resp = requests.get(run["logs_url"], headers=headers)
-                if logs_resp.status_code == 200:
+                # ジョブ一覧を取得
+                jobs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run['id']}/jobs"
+                jobs_resp = requests.get(jobs_url, headers=headers)
+                log_texts = []
+                # デバッグ処理用
+                debug = 0
+                if jobs_resp.status_code == 200:
+                    jobs = jobs_resp.json().get("jobs", [])
+                    # failure の job のみ抽出
+                    failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
+                    
+                    # デバッグ処理
+                    if len(failed_jobs) == 0:
+                        debug += 1
                     import zipfile
                     import io
                     import os
-                    z = zipfile.ZipFile(io.BytesIO(logs_resp.content))
-                    log_texts = []
                     log_dir = os.path.join(os.getcwd(), "log")
                     os.makedirs(log_dir, exist_ok=True)
-                    for name in z.namelist():
-                        if not ("test" in name.lower() or "run" in name.lower()):
-                            #continue
-                            pass
-                        with z.open(name) as f:
+                    for job in failed_jobs:
+                        job_id = job.get("id")
+                        if not job_id:
+                            debug += 10
+                            continue
+                        # job ログをダウンロード（リダイレクト先のZIPを取得）
+                        job_logs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/jobs/{job_id}/logs"
+                        job_logs_resp = requests.get(job_logs_url, headers=headers, stream=True)
+                        if job_logs_resp.status_code in (200, 302):
+                            debug += 100
                             try:
-                                content = f.read().decode(errors="ignore")
-                                log_texts.append(f"===== {name} =====\n{content}")
-                                # ファイルとして保存
-                                # file_path = os.path.join(log_dir, name.replace("/", "_"))
-                                # with open(file_path, "w", encoding="utf-8", errors="ignore") as out_f:
-                                #     out_f.write(content)
+                                z = zipfile.ZipFile(io.BytesIO(job_logs_resp.content))
                             except Exception:
+                                # リダイレクトで直接S3先が返る場合 content が ZIP でない可能性があるため、try/catch
+                                debug += 1000
+                                try:
+                                    txt = job_logs_resp.content.decode(errors="ignore")
+                                except Exception:
+                                    txt = str(job_logs_resp.content)
+                                log_texts.append(f"===== job:{job.get('name')} raw_log =====\n{txt}")
                                 continue
-                    failure_reason = "\n\n".join(log_texts) if log_texts else "(No test/run logs found)"
+                            for name in z.namelist():
+                                # ジョブ名を含むファイルや step ログを選ぶフィルタを追加可能
+                                if True:
+                                    with z.open(name) as f:
+                                        try:
+                                            content = f.read().decode(errors="ignore")
+                                            log_texts.append(f"===== job:{job.get('name')} file:{name} =====\n{content}")
+                                        except Exception:
+                                            debug += 10000
+                                            continue
                 else:
-                    failure_reason = f"Failed to fetch logs: {logs_resp.status_code}"
+                    log_texts = [f"Failed to fetch jobs: {jobs_resp.status_code}"]
+                failure_reason = "\n\n".join(log_texts) if log_texts else "(No failed job logs found)"
+                if debug != 0:
+                    failure_reason += f"\n\n[Debug info: {debug}]"
             except Exception as ex:
                 failure_reason = f"Log parse error: {ex}"
         return WorkflowResponse(

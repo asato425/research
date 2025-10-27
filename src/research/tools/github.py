@@ -282,6 +282,33 @@ class GitHubTool:
         log(result.status, result.message)
         return result
     
+    def get_latest_workflow_logs_old(self, repo_url: str, commit_sha: str) -> WorkflowResult:
+        """
+        指定したコミットSHAに対応する最新のGitHub Actionsワークフローの実行結果・ログを取得する。
+
+        Args:
+            repo_url (str): GitHubリポジトリのURL
+            commit_sha (str): 対象コミットのSHA
+
+        Returns:
+            WorkflowResult:
+                status (str): ワークフローの状態（例: "completed", "in_progress", "error" など）
+                message (str): 実行結果の説明メッセージ
+                conclusion (str|None): ワークフローの最終結論（"success", "failure" など）
+                html_url (str|None): 実行結果のGitHubページURL
+                logs_url (str|None): ログ取得用URL
+                failure_reason (str|None): 失敗時の詳細ログや理由
+        """
+        if not self._is_github_token_set():
+            log("error", "GITHUB_TOKENがセットされていないため、リポジトリをフォークできません")
+            self._set_github_token()
+
+        payload = {"repo_url": repo_url, "commit_sha": commit_sha}
+        resp = requests.post(f"{self.base_url}/workflow/latest_old", json=payload)
+        result = WorkflowResult(**resp.json())
+        log(result.status, result.message)
+        return result
+    
     def get_latest_workflow_logs(self, repo_url: str, commit_sha: str) -> WorkflowResult:
         """
         指定したコミットSHAに対応する最新のGitHub Actionsワークフローの実行結果・ログを取得する。
