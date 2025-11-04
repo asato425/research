@@ -21,14 +21,14 @@ def get_yml_rules(branch_name:str):
       - actions/checkout アクションを使用するときは必ず適切にpersist-credentialsを設定してください
       - ジョブやステップには必ずnameキーでわかりやすく簡潔な名前をつけてください
       - 必ずバージョンを指定して記述してください
-      - キーは小文字のスネークケースで記述してください
-      - 値は基本的に文字列で、必要に応じてリストやマップを使用してください
       その他のルール:
       - YAML の内容だけを出力してください。Markdown の ```yaml や ``` は出力しないでください。
       生成例：
       name: CI
       on: 
-        workflow_dispatch:
+        push:
+          branches:
+            - {branch_name}
       jobs:
         build:
           ...  # ビルドジョブの詳細
