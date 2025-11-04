@@ -124,5 +124,27 @@ def main():
 # 実行例）
 # poetry run python  src/research/main.py --repo_url "https://github.com/asato425/test"
 if __name__ == "__main__":
-    main()
-
+    #main()
+    from research.tools.github import GitHubTool
+    from research.tools.parser import ParserTool
+    github = GitHubTool()
+    parser = ParserTool()
+    result1 = github.get_latest_workflow_logs("https://github.com/asato425/NewPipe", "621e97305472fa808fdf51134ac6f121b0ac1951").failure_reason
+    result2 = github.get_latest_workflow_logs_new("https://github.com/asato425/NewPipe", "621e97305472fa808fdf51134ac6f121b0ac1951").failure_reason
+    print("Old_num:", len(result1))
+    print("New_num:", len(result2))
+    # result1 = parser.remove_timestamps(result1)
+    # result2 = parser.remove_timestamps(result2)
+    # print("Old_num:", len(result1))
+    # print("New_num:", len(result2))
+    # result1 = parser.extract_error_context(result1, 0)
+    # result2 = parser.extract_error_context(result2, 0)
+    # print("Old_num:", len(result1))
+    # print("New_num:", len(result2))
+    # resultをファイルに保存したい
+    with open("old_log.txt", "w") as f:
+        f.write(result1)
+    with open("new_log.txt", "w") as f:
+        f.write(result2)
+    
+    #print(result2)
