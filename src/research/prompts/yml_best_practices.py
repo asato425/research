@@ -36,25 +36,26 @@ def get_yml_best_practices(state: WorkflowState) -> str:
         GitHub Actionsのymlベストプラクティス
     '''
     enable_reuse = state.best_practices_enable_reuse
+    language = state.language.lower()
      # Python, JavaScript, Java以外の言語や、再利用が無効な場合はLLMに生成させる
      
     # 保存してあるベストプラクティスのファイル名一覧を取得
     best_practice_files = [
         f[:-3] for f in os.listdir("src/research/best_practices") if f.endswith(".md")
     ]
-    if not enable_reuse or state.language.lower() not in best_practice_files:
-        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がbest_practices/にない、または再利用が無効なためLLMに生成させます。")
+    if not enable_reuse or language not in best_practice_files:
+        log("info", f"対象言語が{language}であり、ベストプラクティスの情報がbest_practices/にない、または再利用が無効なためLLMに生成させます。")
         llm = LLMTool().create_model(model_name=state.model_name)
         chain = prompt | llm | StrOutputParser()
-        result = chain.invoke({"programming_language": state.language, "num": state.best_practice_num})
-        log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
+        result = chain.invoke({"programming_language": language, "num": state.best_practice_num})
+        log("info", f"{language}プロジェクトのGitHub Actionsのymlベストプラクティスを{state.best_practice_num}個取得しました。")
     else:
         # コスト削減のため、gpt-5-miniで生成し、保存しておいたものを使い回す
-        log("info", f"対象言語が{state.language}であり、ベストプラクティスの情報がresearch/best_practices/にあるためファイルから取得します。")
-        with open(f'src/research/best_practices/{state.language.lower()}.md', 'r', encoding='utf-8') as f:
+        log("info", f"対象言語が{language}であり、ベストプラクティスの情報がresearch/best_practices/にあるためファイルから取得します。")
+        with open(f'src/research/best_practices/{language}.md', 'r', encoding='utf-8') as f:
             result = f.read()
-        log("info", f"{state.language}プロジェクトのGitHub Actionsのymlベストプラクティスを10個取得しました。")
-        
+        log("info", f"{language}プロジェクトのGitHub Actionsのymlベストプラクティスを10個取得しました。")
+
     return result
 
 def main(language: str, best_practice_num: int = 10):
