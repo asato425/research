@@ -29,11 +29,11 @@ class WorkflowGenerator:
         # Workflow Generatorの実行制御
         if state.run_workflow_generator:
             if "github_repo_parser" == state.prev_node:
-                result, human_prompt, finish_is =  self._generate_workflow(state)
+                result, human_prompt, finish_is, final_status =  self._generate_workflow(state)
             elif "workflow_linter" == state.prev_node:
-                result, human_prompt, finish_is = self._modify_after_lint(state)
+                result, human_prompt, finish_is, final_status = self._modify_after_lint(state)
             elif "workflow_executor" == state.prev_node:
-                result, human_prompt, finish_is = self._modify_after_execute(state)
+                result, human_prompt, finish_is, final_status = self._modify_after_execute(state)
             else:
                 raise ValueError("不正な入力です")    
         else:
@@ -50,7 +50,7 @@ class WorkflowGenerator:
             log("info", "Workflow Generatorでfinish_isがTrueになったのでプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "failed to generate workflow",
+                "final_status": final_status,
                 "messages": [human_prompt, 
                              AIMessage(content="生成されたGitHub Actionsワークフローの内容：\n"+
                                        result.generated_text if (result and result.generated_text) else "生成されたワークフローはありません"+
@@ -118,6 +118,7 @@ class WorkflowGenerator:
         # repo_infoをもとにワークフロー情報を生成する処理
         llm = LLMTool()
         finish_is = False
+        final_status = "success"
 
         if state.generate_best_practices:
             log("info", "ベストプラクティスの取得を開始します")
@@ -150,14 +151,14 @@ class WorkflowGenerator:
                     f"{best_practices}\n"
                     "【注意事項】\n"
                     "- 提供している情報から生成が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
-                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
+                    "- thoughtには生成する際の思考過程を簡潔に設定してください。\n"
         )
-        if state.count_tokens(str(human_prompt.content)) > 30000:
-            log("warning", "human_promptが30000トークンを超えたため、実験ではプログラムを終了します")
-            return {
-                "finish_is": True,
-                "final_status": "human_prompt tokens exceed 30000"
-            }
+        if state.count_tokens(str(human_prompt.content)) > 200000:
+            log("warning", "human_promptが200000トークンを超えたため、実験ではプログラムを終了します")
+            result = None
+            finish_is = True
+            final_status = "human_prompt tokens exceed 200000"
+            return result, human_prompt, finish_is, final_status
 
         prompt = ChatPromptTemplate.from_messages(state.messages + [human_prompt])
         chain = prompt | model
@@ -166,13 +167,15 @@ class WorkflowGenerator:
         if result is None or result.generated_text is None:
             log("error", "ワークフローの生成結果がNoneなのでプログラムを終了します")
             finish_is = True
+            final_status = "generate workflow result is None"
         elif result.status != "success":
             log("info", "ワークフローの生成に失敗したのでプログラムを終了します")
             finish_is = True
+            final_status = "failed to generate workflow"
         else:
             log(result.status, f"LLM{self.model_name}を利用し、ワークフローを生成しました")
 
-        return result, human_prompt, finish_is
+        return result, human_prompt, finish_is, final_status    
 
     def _modify_after_lint(self, state: WorkflowState) -> GenerateWorkflow:
         """
@@ -180,20 +183,24 @@ class WorkflowGenerator:
         lint_resultにはファイルの内容とlint結果を含む
         """
         finish_is = False
+        final_status = "success"
         # lint_resultをもとにworkflowを修正する処理
         lint_result = state.lint_results[-1]
         if lint_result is None:
             log("error", "lint_resultがNoneでWorkflowGeneratorに修正しに来ているため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "lint_result is None"
+            return None, None, finish_is, final_status
         elif lint_result.status == "success":
             log("info", "lint_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "lint_result status is success"
+            return None, None, finish_is, final_status
         elif lint_result.status == "linter_error":
             log("error", "lint_result.statusがlinter_errorでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "lint_result is linter_error"
+            return None, None, finish_is, final_status
 
         llm = LLMTool()
         
@@ -211,14 +218,13 @@ class WorkflowGenerator:
                     "注意点"
                     "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。\n"
                     "- Lintエラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
-                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
+                    "- thoughtには生成する際の思考過程を簡潔に設定してください。\n"
         )
-        if state.count_tokens(str(human_prompt.content)) > 20000:
-            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
-            return {
-                "finish_is": True,
-                "final_status": "human_prompt tokens exceed 20000"
-            }
+        if state.count_tokens(str(human_prompt.content)) > 50000:
+            log("warning", "human_promptが50000トークンを超えたため、実験ではプログラムを終了します")
+            finish_is = True
+            final_status = "modify_after_lint human_prompt tokens exceed 50000"
+            return None, None, finish_is, final_status
         prompt = ChatPromptTemplate.from_messages(state.messages_to_llm() + [human_prompt])
         chain = prompt | model
         result = chain.invoke({})
@@ -226,15 +232,18 @@ class WorkflowGenerator:
         if result is None:
             log("error", "ワークフローのLintエラー修正結果がNoneなのでプログラムを終了します")
             finish_is = True
+            final_status = "modify after lint result is None"
         elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             finish_is = True
+            final_status = "failed to modify workflow after lint"
         elif result.generated_text is None:
             log("error", "ワークフローのLintエラー修正結果のgenerated_textがNoneなのでプログラムを終了します")
             finish_is = True
+            final_status = "failed to modify workflow after lint result is None"
         else:
             log(result.status, f"LLM{self.model_name}を利用し、Lint結果に基づいてワークフローを修正しました")
-        return result, human_prompt, finish_is
+        return result, human_prompt, finish_is, final_status
 
     def _modify_after_execute(self, state: WorkflowState) -> GenerateWorkflow:
         """
@@ -242,20 +251,24 @@ class WorkflowGenerator:
         exec_resultにはファイルの内容と実行結果を含む
         """
         finish_is = False
+        final_status = "success"
         # exec_resultをもとにworkflowを修正する処理
         exec_result = state.workflow_run_results[-1]
         if exec_result is None:
             log("error", "exec_resultがNoneでWorkflowGeneratorに修正しに来ているため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "exec_result is None"
+            return None, None, finish_is, final_status
         elif exec_result.status == "success":
             log("info", "workflow_run_result.statusがsuccessでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "exec_result status is success"
+            return None, None, finish_is, final_status
         elif exec_result.parsed_error.yml_errors is None:
             log("error", "workflow_run_result.parsed_error.yml_errorsがNoneでWorkflowGeneratorに来るのはおかしいため、プログラムを終了します")
             finish_is = True
-            return None, None, finish_is
+            final_status = "workflow_run_result.parsed_error.yml_errors is None"
+            return None, None, finish_is, final_status
 
         llm = LLMTool()
         
@@ -273,13 +286,13 @@ class WorkflowGenerator:
                     "注意点"
                     "- 今までの生成されたワークフローと全く同じ内容は生成しないでください。\n"
                     "- 実行エラーの内容から修正が不可能だと判断した場合はstatusにcannot generateを、generated_textにその理由を設定してください。\n"
-                    "- 生成する際の思考過程をthoughtに簡潔に記述してください。\n"
+                    "- thoughtには生成する際の思考過程を簡潔に設定してください。\n"
         )
-        if state.count_tokens(str(human_prompt.content)) > 20000:
-            log("warning", "human_promptが20000トークンを超えたため、実験ではプログラムを終了します")
+        if state.count_tokens(str(human_prompt.content)) > 50000:
+            log("warning", "human_promptが50000トークンを超えたため、実験ではプログラムを終了します")
             return {
                 "finish_is": True,
-                "final_status": "human_prompt tokens exceed 20000"
+                "final_status": "human_prompt tokens exceed 50000"
             }
         prompt = ChatPromptTemplate.from_messages(state.messages_to_llm() + [human_prompt])
         chain = prompt | model
@@ -287,13 +300,16 @@ class WorkflowGenerator:
         if result is None:
             log("error", "ワークフローの実行エラー修正結果がNoneなのでプログラムを終了します")
             finish_is = True
+            final_status = "modify after execute result is None"
         elif result.status != "success":
             log("info", "ワークフローの修正に失敗したのでプログラムを終了します")
             finish_is = True
+            final_status = "failed to modify workflow after execute"
         elif result.generated_text is None:
             log("error", "ワークフローの実行エラー修正結果のgenerated_textがNoneなのでプログラムを終了します")
             finish_is = True
+            final_status = "modify after execute result.text is None"
         else:
             log(result.status, f"LLM{self.model_name}を利用し、ワークフローの実行結果に基づいてワークフローを修正しました")
-        return result, human_prompt, finish_is
+        return result, human_prompt, finish_is, final_status
 
