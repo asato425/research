@@ -143,7 +143,7 @@ class GitHubRepoParser:
                 )
             ])
 
-            # チェーンの作成、TODO:必要に応じてコスト削減のためモデルを変更
+            # チェーンの作成
             chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
 
             # チェーンの実行
@@ -162,6 +162,7 @@ class GitHubRepoParser:
                 }
                 
             # 主要ファイルの内容の取得
+            total_parsed_tokens = 0 # 主要ファイルのパースした内容の合計トークン数をカウントする変数
             for required_file in workflow_required_files_result.workflow_required_files:
                 log("info", f"主要ファイル: {required_file.name} - {required_file.path} - {required_file.description}")
                 get_content_result = github.read_file(local_path, required_file.path)
@@ -184,8 +185,9 @@ class GitHubRepoParser:
                         required_file.parse_content = file_content_parse_result
                         log("info", f"{required_file.name}の内容のパースに成功しました")
                         count = len(required_file.content) - len(required_file.parse_content)
+                        total_parsed_tokens += state.count_tokens(required_file.parse_content)
                         required_file.reduced_length = count
-                        log("info", f"パースによって削減できた文字数: {len(required_file.content) - len(required_file.parse_content)}")
+                        log("info", f"パースによって削減できた文字数: {count}")
                         if count >= 0:
                             log("info", f"{required_file.name}の内容が{count}文字削減されました")
                         else:
@@ -193,6 +195,15 @@ class GitHubRepoParser:
                             required_file.parse_content = required_file.content
 
             workflow_required_files = workflow_required_files_result.workflow_required_files
+            
+            # 主要ファイルのパース後の内容の合計トークン数が200000を超える場合は終了
+            if total_parsed_tokens > 200000:
+                log("error", f"主要ファイルのパース後の内容の合計トークン数が200000を超えています: {total_parsed_tokens}トークン")
+                log("error", "ワークフロー生成においてトークン制限にかかる可能性があるため、プログラムを終了します")
+                return {
+                    "finish_is": True,
+                    "final_status": "parsed required files tokens exceed 200000"
+                }
         else:
             # 主要ファイルの生成をスキップ
             log("info", "主要ファイルの生成はスキップされました")
