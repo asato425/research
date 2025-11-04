@@ -69,4 +69,5 @@ messages.txt
 src/research/evaluation/*.xlsx
 src/research/evaluation/*.txt
 src/research/evaluation/details/*
-src/research/message_history/
+src/research/evaluation/past_history/*
+src/research/message_history/*
