@@ -186,6 +186,14 @@ class GitHubRepoParser:
                         log("info", f"{required_file.name}の内容のパースに成功しました")
                         count = len(required_file.content) - len(required_file.parse_content)
                         total_parsed_tokens += state.count_tokens(required_file.parse_content)
+                        # 主要ファイルのパース後の内容の合計トークン数が200000を超える場合は終了
+                        if total_parsed_tokens > 200000:
+                            log("error", f"主要ファイルのパース後の内容の合計トークン数が200000を超えています: {total_parsed_tokens}トークン")
+                            log("error", "ワークフロー生成においてトークン制限にかかる可能性があるため、プログラムを終了します")
+                            return {
+                                "finish_is": True,
+                                "final_status": "parsed required files tokens exceed 200000"
+                            }
                         required_file.reduced_length = count
                         log("info", f"パースによって削減できた文字数: {count}")
                         if count >= 0:
@@ -196,14 +204,6 @@ class GitHubRepoParser:
 
             workflow_required_files = workflow_required_files_result.workflow_required_files
             
-            # 主要ファイルのパース後の内容の合計トークン数が200000を超える場合は終了
-            if total_parsed_tokens > 200000:
-                log("error", f"主要ファイルのパース後の内容の合計トークン数が200000を超えています: {total_parsed_tokens}トークン")
-                log("error", "ワークフロー生成においてトークン制限にかかる可能性があるため、プログラムを終了します")
-                return {
-                    "finish_is": True,
-                    "final_status": "parsed required files tokens exceed 200000"
-                }
         else:
             # 主要ファイルの生成をスキップ
             log("info", "主要ファイルの生成はスキップされました")
