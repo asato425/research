@@ -68,7 +68,7 @@ class GitHubRepoParser:
             }
 
         #.githubフォルダの削除(存在する場合)
-        folder_exists_result = github.folder_exists_in_repo(local_path=local_path, folder_name=".github")
+        folder_exists_result = github.folder_exists_in_repo(local_path=local_path, folder_name=".github/workflows")
         if folder_exists_result.status == "success":
             delete_github_folder_result = github.delete_folder(
                 local_path=local_path,
@@ -91,7 +91,12 @@ class GitHubRepoParser:
                 return {
                     "finish_is": True,
                     "final_status": "failed to push changes"}
-
+        else:
+            log("info", ".githubフォルダは存在しなかったため、終了します")
+            return {
+                "finish_is": True,
+                "final_status": ".github folder does not exist"
+            }
         # ファイルツリーの取得
         # os.walkを使った場合
         # file_tree_result = github.get_file_tree(local_path)
