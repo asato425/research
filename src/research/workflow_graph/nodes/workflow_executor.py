@@ -10,7 +10,7 @@ import time
 このモジュールはワークフローの実行を担当します。
 """
 
-EXECUTE_LIMIT = 6 # ワークフローの実行待機の最大回数(5分*6回=30分)
+EXECUTE_LIMIT = 4 # ワークフローの実行待機の最大回数(5分*4回=20分)
 class WorkflowExecutor:
     """ワークフローの実行を担当するクラス"""
 
@@ -21,9 +21,7 @@ class WorkflowExecutor:
         
         local_path = state.local_path
         github = GitHubTool()
-        # パースは軽量モデルで十分なのでstate.model_nameは使わない
-        # TODO: パースの精度が悪かったらLLMのモデルをワークフロー生成のモデルと同じにする
-        parser = ParserTool(model_name=state.model_name)
+        parser = ParserTool(model_name=state.model_name, temperature=state.temperature)
         
         # pushするymlファイルの読み込み
         read_yml_file_result = github.read_file(
