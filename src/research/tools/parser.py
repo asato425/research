@@ -14,12 +14,13 @@ class LogParseResult(BaseModel):
     project_errors: str | None = Field(None, description="その他プロジェクト固有のエラーの説明、ない場合はNoneとしてください")
     unknown_errors: str | None = Field(None, description="不明なエラーの説明、ない場合はNoneとしてください")
 class ParserTool:
-    def __init__(self, model_name: str = "gpt-5-mini"):
+    def __init__(self, model_name: str = "gpt-5-mini", temperature: float = 0.0):
         """
         Returns:
             None
         """
         self.model_name = model_name
+        self.temperature = temperature
 
     def workflow_log_parse(self, workflow_result: WorkflowResult) -> LogParseResult:
 
@@ -32,6 +33,7 @@ class ParserTool:
   
         llm = LLMTool().create_model(
             model_name=self.model_name, 
+            temperature=self.temperature,
             output_model=LogParseResult
         )
 		
@@ -160,6 +162,7 @@ class ParserTool:
         
         llm = LLMTool().create_model(
             model_name=self.model_name, 
+            temperature=self.temperature,
         )
         
         parse_details = None
