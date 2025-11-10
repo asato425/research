@@ -32,7 +32,7 @@ class GitHubRepoParser:
         llm = LLMTool()
         #rag = RAGTool()
         # TODO: 生成以外のLLMの処理はgpt-4o-miniの軽量モデルにする場合は引数の指定なしにする
-        parser = ParserTool(model_name=state.model_name)
+        parser = ParserTool(model_name=state.model_name, temperature=state.temperature)
         
 
         # リポジトリ情報の取得
@@ -149,7 +149,7 @@ class GitHubRepoParser:
             ])
 
             # チェーンの作成
-            chain = prompt | llm.create_model(model_name=self.model_name, output_model=WorkflowRequiredFiles)
+            chain = prompt | llm.create_model(model_name=self.model_name, temperature=state.temperature, output_model=WorkflowRequiredFiles)
 
             # チェーンの実行
             workflow_required_files_result = chain.invoke({
