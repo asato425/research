@@ -2,14 +2,15 @@ from research.log_output.log import set_log_is,log
 from research.workflow_graph.builder import WorkflowBuilder
 from research.workflow_graph.state import WorkflowState
 from research.tools.github import GitHubTool
-from datetime import datetime
+#from datetime import datetime
 import time
+import tempfile
 # ノードの実行制御フラグ
 RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
 RUN_LINTER = True
 RUN_WORKFLOW_EXECUTER = True
-RUN_EXPLANATION_GENERATOR = False
+RUN_EXPLANATION_GENERATOR = True
 
 # 細かい実行制御フラグ
 RUN_ACTIONLINT = True
@@ -23,12 +24,13 @@ BEST_PRACTICES_ENABLE_REUSE = True
 """
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4o-mini"、"gpt-5-mini"、"gpt-5"、"claude"を指定できます。
 """
-MODEL_NAME = "gemini-2.5-pro"
+MODEL_NAME = "gpt-5-mini"
 TEMPERATURE = 0.0
 
-now_str = datetime.now().strftime("%m%d_%H%M")
+#now_str = datetime.now().strftime("%m%d_%H%M")
 # コマンドライン引数のデフォルト値
-WORK_REF = "work_" + now_str  # 作業用ブランチ名
+#WORK_REF = "work_" + now_str  # 作業用ブランチ名
+WORK_REF = "work_gpt-5-mini"  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
 MAX_REQUIRED_FILES = 10 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 10 # ワークフローのループ回数の上限
@@ -73,70 +75,132 @@ def evaluate(repo_url: str, message_file_name: str) -> WorkflowState | None:
         log("error", f"{repo_url} でエラー発生したため、このリポジトリでの評価を終了します: {e}")
         return None
         
-    
-# 複数のリポジトリに対してワークフローエージェントを実行する関数
-def evaluate_multiple(repos: dict[int, str]) -> list[WorkflowState]:
+
+def _unique_path(path: str) -> str:
+    # ...existing code or reuse helper if already present...
+    import os
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    i = 1
+    while True:
+        candidate = f"{base}_{i}{ext}"
+        if not os.path.exists(candidate):
+            return candidate
+        i += 1
+        
+def save_state_to_excel(state: WorkflowState, language: str = "unknown"):
+    """
+    単一の WorkflowState を即時に Excel に追記して保存する。
+    details 部分は従来通り details フォルダに1ファイルとして保存する。
+    原子操作のため一時ファイルを書いてから置換します。
+    """
+    import pandas as pd
+    import json
+    import os
+
+    def details_is(row: str) -> bool:
+        return row in {
+            "messages",
+            "repo_info",
+            "file_tree",
+            "workflow_required_files",
+            "generate_workflows",
+            "generate_explanation",
+            "lint_results",
+            "workflow_run_results",
+            "before_generated_text",
+        }
+    def condition_experiment() -> str:
+        result = ""
+        if not RUN_LINTER:
+            result += "_no_linter"
+        if not RUN_WORKFLOW_EXECUTER:
+            result += "_no_executer"
+        if not GENERATE_WORKFLOW_REQUIRED_FILES:
+            result += "_no_reqfiles"
+        if not GENERATE_BEST_PRACTICES:
+            result += "_no_bestpractices"
+        return result
+
+    safe_model = MODEL_NAME.replace(".", "_")
+    safe_temp = str(TEMPERATURE).replace(".", "_")
+    output_dir = f"src/research/evaluation/details/rq4_{language}{safe_model}{safe_temp}{condition_experiment()}/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # state が None の場合は何もしない
+    if state is None:
+        return
+
+    state_dict = state.model_dump()
+    repo_name = state.repo_url.rstrip("/").split("/")[-1]
+    safe_repo = repo_name.replace(".", "_")
+    detail_filename = f"{safe_repo}_{safe_model}_{safe_temp}.txt"
+
+    # row と details を作る
+    row = {}
+    details = {}
+    for key, value in state_dict.items():
+        if details_is(key):
+            details[key] = value
+            row[key] = detail_filename
+        else:
+            row[key] = value
+
+    # details を保存（重複避け）
+    if details:
+        detail_path = os.path.join(output_dir, detail_filename)
+        detail_path = _unique_path(detail_path)
+        with open(detail_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(details, ensure_ascii=False, indent=2))
+
+    # Excel に追記（既存読み込み -> 結合 -> 一時ファイルに書いて置換）
+    excel_filename = f"src/research/evaluation/rq4_{language + safe_model + safe_temp + condition_experiment()}.xlsx"
+    new_df = pd.DataFrame([row])
+    try:
+        if os.path.exists(excel_filename):
+            try:
+                existing_df = pd.read_excel(excel_filename, engine="openpyxl")
+                combined = pd.concat([existing_df, new_df], ignore_index=True)
+            except Exception:
+                combined = new_df
+        else:
+            combined = new_df
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
+        os.close(tmp_fd)
+        combined.to_excel(tmp_path, index=False, engine="openpyxl")
+        os.replace(tmp_path, excel_filename)
+    except Exception as ex:
+        # 保存に失敗しても評価を止めない。ログに出力
+        log("error", f"failed to save state for {state.repo_url}: {ex}")
+
+def evaluate_multiple(repos: dict[int, str], language: str) -> list[WorkflowState]:
     states = []
+    # 必要な評価結果数
+    results_needed = 15
     for i, repo in repos.items():
         print(f"\n\n===== リポジトリ {i}/{len(repos)}: {repo} の評価を開始 =====")
         message_file_name = f"src/research/message_history/repo_{i}.txt"
         state = evaluate(repo, message_file_name)
-        states.append(state)
         print(f"===== リポジトリ {i}/{len(repos)}: {repo} の評価が完了 =====\n\n")
-        # リポジトリごとにクールダウン
+        if state is not None:
+            # ここで逐次保存する
+            try:
+                save_state_to_excel(state, language=language)  # 必要なら言語を渡す
+            except Exception as e:
+                log("error", f"save_state_to_excel でエラー: {e}")
+            states.append(state)
+            if state.final_status == "success" or state.final_status == "yml_errors" or state.final_status == "project_errors":
+                results_needed -= 1
+                if results_needed <= 0:
+                    print("✅ 必要な評価結果数に達したため、評価を終了します")
+                    break
+            print(f"✅ 現在取得済みの評価結果数: {15-results_needed} 件、残り取得が必要な件数: {results_needed} 件")
+        # クールダウン
         if i < len(repos):
-            log("info","[COOLDOWN] 1秒待機中...")
-            time.sleep(1)
+            log("info","[COOLDOWN] 10秒待機中...")
+            time.sleep(10)
     return states
-
-# 複数のWorkflowStateをエクセルに保存する関数
-def save_states_to_excel(states: list[WorkflowState], language: str = "unknown"):
-    import pandas as pd
-    import json
-    import os
-    """
-    WorkflowState のリストを Excel に保存する関数
-    - 各 state の複雑なフィールド（list, dict）は (言語名)_(インデックス).txt にまとめて保存し、Excelにはファイル名のみ記載
-    """
-    # detailsにまとめるべきフィールドかどうか
-    def details_is(row:str)-> bool:
-        if row == "messages" or row == "repo_info" or row == "file_tree" or \
-        row == "workflow_required_files" or row == "generate_workflows" or \
-        row == "generate_explanation" or row == "lint_results" or \
-        row == "workflow_run_results" or row == "before_generated_text":
-            return True
-        return False
-    rows = []
-    output_dir = f"src/research/evaluation/details/{language + datetime.now().strftime('%m%d')}"
-    os.makedirs(output_dir, exist_ok=True)
-    for idx, state in enumerate(states, 1):
-        row = {}
-        details = {} 
-        if state is None:
-            print(f"⚠️ 保存しようとした state {idx} が None だったためスキップします")
-            row["final_status"] = f"{language}{idx}state is None"
-            rows.append(row)
-            continue
-        state_dict = state.model_dump()    
-        repo_name = state.repo_url.rstrip("/").split("/")[-1]
-        detail_filename = f"{repo_name}.txt"
-        for key, value in state_dict.items():
-            # list や dict は details にまとめる
-            if details_is(key):
-                details[key] = value
-                row[key] = detail_filename
-            else:
-                row[key] = value
-        # detailsがあれば1ファイルにまとめて保存
-        if details:
-            detail_path = os.path.join(output_dir, detail_filename)
-            with open(detail_path, "w", encoding="utf-8") as f:
-                f.write(json.dumps(details, ensure_ascii=False, indent=2))
-        rows.append(row)
-    df = pd.DataFrame(rows)
-    excel_filename = f"src/research/evaluation/{language +  datetime.now().strftime('%m%d')}.xlsx"
-    df.to_excel(excel_filename, index=False, engine="openpyxl")
-    print(f"✅ {excel_filename} に {len(states)} 件の state を保存しました（詳細は {output_dir} に保存）")
 
 def delete_remote_repo(language_repo_dict: dict[str, dict[int, str]]):
     github = GitHubTool()
@@ -149,63 +213,90 @@ def main():
     start_time = time.time()
     set_log_is(SET_LOG_IS)
     # ここに評価したいリポジトリのURL(フォーク済み)を追加してください(今書いてあるのは例です)
+    # TODO:実験の流れ
+    # 1. repo_selector.pyでリポジトリを選定してフォーク
+    # 2. フォークしたリポジトリのURLをここに追加
+    # 3. 全てのモジュールをtrueにしてevaluation.pyを実行し、successまたはyml_errorsで終了したリポジトリを各言語15個ずつ集める
     language_repo_dict = {
         # "python": {
         #     1: "https://github.com/asato425/test_python"
         # },
-        "python": {
-            1: "https://github.com/asato425/public-apis",
-            2: "https://github.com/asato425/Python-1",
-            3: "https://github.com/asato425/stable-diffusion-webui",
-            4: "https://github.com/asato425/transformers",
-            5: "https://github.com/asato425/youtube-dl",
-            6: "https://github.com/asato425/yt-dlp",
-            7: "https://github.com/asato425/langchain-1",
-            8: "https://github.com/asato425/ComfyUI",
-            9: "https://github.com/asato425/fastapi",
-            10: "https://github.com/asato425/whisper",
-        },
-        "java": {
-            1: "https://github.com/asato425/java-design-patterns",
-            2: "https://github.com/asato425/mall",
-            3: "https://github.com/asato425/Java-1",
-            4: "https://github.com/asato425/guava",
-            5: "https://github.com/asato425/RxJava",
-            6: "https://github.com/asato425/termux-app",
-            7: "https://github.com/asato425/jadx",
-            8: "https://github.com/asato425/JeecgBoot",
-            9: "https://github.com/asato425/MPAndroidChart",
-            10: "https://github.com/asato425/NewPipe",
-        },
-        "javascript": {
-            1: "https://github.com/asato425/javascript-algorithms",
-            2: "https://github.com/asato425/javascript",
-            3: "https://github.com/asato425/axios",
-            4: "https://github.com/asato425/create-react-app",
-            5: "https://github.com/asato425/github-readme-stats",
-            6: "https://github.com/asato425/express",
-            7: "https://github.com/asato425/bruno",
-            8: "https://github.com/asato425/anime",
-            9: "https://github.com/asato425/lodash",
-            10: "https://github.com/asato425/jquery",
-        },
-        # "c++": {
+        # まず最初の20個でやって、それで10集まらなかったら追加でやる
+        #"python": {
+            # 1: "https://github.com/asato425/public-apis",
+            # 2: "https://github.com/asato425/Python-1", # pyproject.tomlが読み取れない（パスの設定に失敗）ことが原因かも
+            # 3: "https://github.com/asato425/stable-diffusion-webui", #主要ファイルの選定でLLMの応答なしが発生
+            # #4: "https://github.com/asato425/transformers", ワークフロー実行の待機でタイムアウト
+            # 5: "https://github.com/asato425/youtube-dl",
+            # 6: "https://github.com/asato425/yt-dlp", # pyproject.toml},{ でファイルが読み取れず主要ファイルの選定で
+            # 7: "https://github.com/asato425/langchain-1",# また主要ファイルの取得で同じミス 修正結果をLLMが生成できず
+            # 8: "https://github.com/asato425/ComfyUI",
+            # 9: "https://github.com/asato425/fastapi", #主要ファイルの選定でLLMの応答なし
+            # #10: "https://github.com/asato425/whisper", # ワークフロー実行の待機でタイムアウト
+            # #11: "https://github.com/asato425/django", #ファイル構造のトークン制限
+            # 12: "https://github.com/asato425/markitdown", #修正結果をLLMが生成できず
+            # #13: "https://github.com/asato425/core",# ファイル構造のトークン制限
+            # 14: "https://github.com/asato425/models",
+            # 15: "https://github.com/asato425/browser-use",
+            # 16: "https://github.com/asato425/flask",
+            # 17: "https://github.com/asato425/sherlock",
+            # #18: "https://github.com/asato425/gpt_academic",# push　失敗
+            # 19: "https://github.com/asato425/gpt4free",
+            # 20: "https://github.com/asato425/scikit-learn",
         # },
-        # "c#": {
-  
+        # "java": {
+        #     1: "https://github.com/asato425/java-design-patterns",
+        #     #2: "https://github.com/asato425/spring-boot", # ファイル構造のトークン制限
+        #     #3: "https://github.com/asato425/elasticsearch", # ファイル構造のトークン制限
+        #     4: "https://github.com/asato425/Java-1",
+        #     #5: "https://github.com/asato425/spring-framework",# ファイル構造のトークン制限
+        #     6: "https://github.com/asato425/guava",
+        #     7: "https://github.com/asato425/RxJava",
+        #     8: "https://github.com/asato425/termux-app",
+        #     #9: "https://github.com/asato425/dbeaver", # ファイル構造のトークン制限
+        #      10: "https://github.com/asato425/jadx",
+        #     #11: "https://github.com/asato425/dubbo", # ファイル構造のトークン制限
+        #     12: "https://github.com/asato425/NewPipe",
+        #     13: "https://github.com/asato425/glide",
+        #     14: "https://github.com/asato425/netty",
+        #     15: "https://github.com/asato425/easyexcel",
+        #     #16: "https://github.com/asato425/zxing", # unknown errorsによる失敗
+        #     17: "https://github.com/asato425/nacos",
+        #     18: "https://github.com/asato425/WxJava",
+        #     #19: "https://github.com/asato425/kafka", # ファイル構造のトークン制限
+        #     #20: "https://github.com/asato425/keycloak", # ファイル構造のトークン制限
+        #     21: "https://github.com/asato425/xxl-job",
+        #     22: "https://github.com/asato425/canal",
+        #     23: "https://github.com/asato425/spring-cloud-alibaba",
         # },
-        # "go": {
-
-        # },
-        # "ruby": {
+        # "javascript": {
+        #     1: "https://github.com/asato425/javascript-algorithms",
+        #     2: "https://github.com/asato425/javascript",
+        #     3: "https://github.com/asato425/axios",
+        #     #4: "https://github.com/asato425/create-react-app", # ワークフロー実行の待機でタイムアウト
+        #     5: "https://github.com/asato425/github-readme-stats",
+        #     6: "https://github.com/asato425/express",
+        #     #8: "https://github.com/asato425/webpack", # ファイル構造のトークン制限
+        #     9: "https://github.com/asato425/lodash",
+        #     10: "https://github.com/asato425/uBlock",
+        #     11: "https://github.com/asato425/jquery",
+        #     12: "https://github.com/asato425/html5-boilerplate",
+        #     #13: "https://github.com/asato425/prettier", # ファイル構造のトークン制限
+        #     14: "https://github.com/asato425/anything-llm",
+        #     15: "https://github.com/asato425/dayjs",
+        #     16: "https://github.com/asato425/serverless",
+        #     17: "https://github.com/asato425/htmx",
+        #     18: "https://github.com/asato425/meteor",
+        #     #19: "https://github.com/asato425/parcel", # ファイル構造のトークン制限
+        #     20: "https://github.com/asato425/Leaflet",
         # },
         
     }
     for language, repos in language_repo_dict.items():
         print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
         repositories_to_evaluate = {i: url for i, url in repos.items()}
-        states = evaluate_multiple(repositories_to_evaluate)
-        save_states_to_excel(states, language)
+        #states = evaluate_multiple(repositories_to_evaluate, language)
+        evaluate_multiple(repositories_to_evaluate, language)
         print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
 
     #delete_remote_repo(language_repo_dict) # フォークしたリポジトリを削除する場合はコメントアウトを外す
@@ -216,5 +307,29 @@ def main():
 # 実行方法:
 # poetry run python src/research/evaluation/evaluation.py
 if __name__ == "__main__":
+    MODEL_NAME = "gpt-5-mini"
+    TEMPERATURE = 1.0
+    WORK_REF = "work_gpt-5-mini_t_1"  # 作業用ブランチ名
+    RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
+    RUN_WORKFLOW_GENERATOR = True
+    RUN_LINTER = True # RQ4で変更する条件
+    RUN_WORKFLOW_EXECUTER = True # RQ4で変更する条件
+    RUN_EXPLANATION_GENERATOR = True
+
+    # 細かい実行制御フラグ
+    RUN_ACTIONLINT = True
+    RUN_GHALINT = True
+    RUN_PINACT = True # LLMの推測でこの処理を実行することはできないため、ghalintを実行するなら確実にTrueにする
+    GENERATE_WORKFLOW_REQUIRED_FILES = True # RQ4で変更する条件
+    GENERATE_BEST_PRACTICES = True # RQ4で変更する条件
+    BEST_PRACTICES_ENABLE_REUSE = True
+    LOOP_COUNT_MAX = 10 # ワークフローのループ回数の上限
     main()
+    
+# TODO:RQ4は
+# - 主要ファイル →これは実行する
+# - ベストプラクティス →これは実行する
+# - Lint実行  →これは実行する
+# - ワークフロー実行  →これは実行しない、今までの結果で最初のワークフローで実行成功しているものはsuccess、それ以外はyml_errorsにする
+# - ループなし → これは今までの結果で修正なしで成功していればsuccess、それ以外はyml_errorsにする
     

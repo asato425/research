@@ -165,7 +165,7 @@ def is_build_test_repo(repo_full_name: str):
     tree = response.json().get("tree", [])
     files = [item["path"] for item in tree if item["type"] == "blob"]
 
-    # === 1. 言語ごとのビルド設定ファイル ===
+    # === 言語ごとのビルド設定ファイル ===
     build_files = {
         "Python": ["requirements.txt", "setup.py", "pyproject.toml", "tox.ini"],
         "JavaScript": ["package.json"],
@@ -176,10 +176,23 @@ def is_build_test_repo(repo_full_name: str):
         "Rust": ["Cargo.toml"]
     }
 
-    # === 2. テストディレクトリ・テストファイル ===
+    # === テストディレクトリ・テストファイル ===
     test_dirs = ["test", "tests", "__tests__", "src/test", "spec"]
 
-    # === 3. 判定ロジック ===
+    # === GitHub Actionsのワークフローファイル ===
+    github_workflows_dir = ".github/workflows"
+    
+    # === 判定ロジック ===
+    # GitHub Actionsのワークフローファイルが存在しない場合は除外
+    github_check = False
+    for f in files:
+        if f.startswith(github_workflows_dir + "/"):
+            github_check = True
+            break
+    if not github_check:
+        print(f"[NG] {repo_full_name}: .github/workflowsフォルダが存在しません。")
+        return False
+
     has_build_file = any(
         os.path.basename(f) in sum(build_files.values(), []) for f in files
     )
@@ -201,26 +214,26 @@ def is_build_test_repo(repo_full_name: str):
         #print(f"[OK] {repo_full_name}: ビルド設定とテストが確認されました。")
         return True
     elif has_build_file:
-        #print(f"[INFO] {repo_full_name}: ビルド設定ファイルのみ確認されました。")
+        print(f"[INFO] {repo_full_name}: ビルド設定ファイルのみ確認されました。")
         return False
     elif has_test_file:
-        #print(f"[INFO] {repo_full_name}: テスト関連ファイルのみ確認されました。")
+        print(f"[INFO] {repo_full_name}: テスト関連ファイルのみ確認されました。")
         return False 
     else:
-        #print(f"[NG] {repo_full_name}: ビルド設定・テスト関連ファイルが見つかりません。")
+        print(f"[NG] {repo_full_name}: ビルド設定・テスト関連ファイルが見つかりません。")
         return False
 
 
 def main():
     #languages = ["Python", "Java", "JavaScript", "C", "Go", "Ruby"]
-    languages = ["Python", "Java", "JavaScript"]
-    #languages = ["Python"]  # テスト用に1言語に絞る
+    #languages = ["Python", "Java", "JavaScript"]
+    languages = ["JavaScript"]
     star_threshold = 10000
     pushed_after = "2024-10-01"
     main_lang_threshold = 0.8
     # max_file_count = 1000          # 最大ファイル数
     # max_root_folder_count = 50     # 最大ルートフォルダ数
-    repo_num = 50                   # 各言語ごとに取得したいリポジトリ数
+    repo_num = 50                  # 各言語ごとに取得したいリポジトリ数
     repo_url_dict = {}
     for lang in languages:
         repo_count_all = 0 # 全検索件数
