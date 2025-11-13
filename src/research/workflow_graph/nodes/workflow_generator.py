@@ -127,6 +127,12 @@ class WorkflowGenerator:
             log("info", "ベストプラクティスの取得はスキップされました")
             best_practices = "なし"
         
+        if state.generate_workflow_required_files:
+            log("info", "主要ファイルを取得します")
+            workflow_required_files = f"{'\n'.join([f'ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n' for file in state.workflow_required_files])}\n"
+        else:
+            log("info", "主要ファイルの取得はスキップされました")
+            workflow_required_files = "なし"
         model = llm.create_model(
             model_name=self.model_name, 
             temperature=state.temperature,
@@ -139,8 +145,8 @@ class WorkflowGenerator:
                     f"- プロジェクトのローカルパス: {state.local_path}\n"
                     # "- ファイル構造（ツリー形式）:\n"
                     # f"{state.file_tree}\n"
-                    "- 主要ファイル:\n"
-                    f"{"\n".join([f"ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n" for file in state.workflow_required_files])}\n"
+                    "- 主要ファイル\n"
+                    f"{workflow_required_files}\n"
                     # "- リポジトリの情報:\n"
                     # f"{state.repo_info}\n"
                     # "- Web検索による{state.language}プロジェクトのビルド、テスト手順の要約:\n"
