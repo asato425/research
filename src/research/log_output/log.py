@@ -45,6 +45,7 @@ def log(status: str, message: str) -> None:
     level_map = {
         "success": "SUCCESS",
         "completed": "SUCCESS",
+        "exists": "SUCCESS",
         "info": "INFO",
         "warning": "WARNING",
         "error": "ERROR",
