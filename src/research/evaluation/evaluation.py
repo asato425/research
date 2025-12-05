@@ -112,7 +112,7 @@ def save_state_to_excel(state: WorkflowState, language: str = "unknown"):
             "before_generated_text",
         }
     def condition_experiment() -> str:
-        result = ""
+        result = "_loop_20"
         if not RUN_LINTER:
             result += "_no_linter"
         if not RUN_WORKFLOW_EXECUTER:
@@ -125,7 +125,7 @@ def save_state_to_excel(state: WorkflowState, language: str = "unknown"):
 
     safe_model = MODEL_NAME.replace(".", "_")
     safe_temp = str(TEMPERATURE).replace(".", "_")
-    output_dir = f"src/research/evaluation/details/rq4_{language}{safe_model}{safe_temp}{condition_experiment()}/"
+    output_dir = f"src/research/evaluation/details/rq5_{language}{safe_model}{safe_temp}{condition_experiment()}/"
     os.makedirs(output_dir, exist_ok=True)
 
     # state が None の場合は何もしない
@@ -155,7 +155,7 @@ def save_state_to_excel(state: WorkflowState, language: str = "unknown"):
             f.write(json.dumps(details, ensure_ascii=False, indent=2))
 
     # Excel に追記（既存読み込み -> 結合 -> 一時ファイルに書いて置換）
-    excel_filename = f"src/research/evaluation/rq4_{language + safe_model + safe_temp + condition_experiment()}.xlsx"
+    excel_filename = f"src/research/evaluation/rq5_{language + safe_model + safe_temp + condition_experiment()}.xlsx"
     new_df = pd.DataFrame([row])
     try:
         if os.path.exists(excel_filename):
@@ -177,7 +177,7 @@ def save_state_to_excel(state: WorkflowState, language: str = "unknown"):
 def evaluate_multiple(repos: dict[int, str], language: str) -> list[WorkflowState]:
     states = []
     # 必要な評価結果数
-    results_needed = 15
+    results_needed = 16
     for i, repo in repos.items():
         print(f"\n\n===== リポジトリ {i}/{len(repos)}: {repo} の評価を開始 =====")
         message_file_name = f"src/research/message_history/repo_{i}.txt"
@@ -208,6 +208,29 @@ def delete_remote_repo(language_repo_dict: dict[str, dict[int, str]]):
         for i, repo_url in repos.items():
             github.delete_remote_repository(repo_url)
 
+def yml_file_count_words(repo_url: str, ref_list: list[str]) -> list[int]:
+    github = GitHubTool()
+    clone_result = github.clone_repository(repo_url)
+    if clone_result.status != "success":
+        log("error", "リポジトリのクローンに失敗したのでプログラムを終了します")
+        return 0
+    local_path = clone_result.local_path
+    
+    result = []
+    for ref in ref_list:
+        # ブランチの作成
+        create_branch_result = github.create_working_branch(
+                local_path=local_path,
+                branch_name=ref
+            )
+        if create_branch_result.status != "exists":
+            continue
+        word_count = github.count_words_in_file(
+            local_path=local_path,
+            relative_path=".github/workflows/ci.yml",
+        ).info["word_count"]
+        result.append(word_count)
+    return result
 def main():
     # 開始時間の記録
     start_time = time.time()
@@ -221,86 +244,92 @@ def main():
         # "python": {
         #     1: "https://github.com/asato425/test_python"
         # },
-        # まず最初の20個でやって、それで10集まらなかったら追加でやる
-        #"python": {
-            # 1: "https://github.com/asato425/public-apis",
-            # 2: "https://github.com/asato425/Python-1", # pyproject.tomlが読み取れない（パスの設定に失敗）ことが原因かも
-            # 3: "https://github.com/asato425/stable-diffusion-webui", #主要ファイルの選定でLLMの応答なしが発生
-            # #4: "https://github.com/asato425/transformers", ワークフロー実行の待機でタイムアウト
-            # 5: "https://github.com/asato425/youtube-dl",
-            # 6: "https://github.com/asato425/yt-dlp", # pyproject.toml},{ でファイルが読み取れず主要ファイルの選定で
-            # 7: "https://github.com/asato425/langchain-1",# また主要ファイルの取得で同じミス 修正結果をLLMが生成できず
-            # 8: "https://github.com/asato425/ComfyUI",
-            # 9: "https://github.com/asato425/fastapi", #主要ファイルの選定でLLMの応答なし
-            # #10: "https://github.com/asato425/whisper", # ワークフロー実行の待機でタイムアウト
-            # #11: "https://github.com/asato425/django", #ファイル構造のトークン制限
-            # 12: "https://github.com/asato425/markitdown", #修正結果をLLMが生成できず
-            # #13: "https://github.com/asato425/core",# ファイル構造のトークン制限
-            # 14: "https://github.com/asato425/models",
-            # 15: "https://github.com/asato425/browser-use",
-            # 16: "https://github.com/asato425/flask",
-            # 17: "https://github.com/asato425/sherlock",
-            # #18: "https://github.com/asato425/gpt_academic",# push　失敗
-            # 19: "https://github.com/asato425/gpt4free",
-            # 20: "https://github.com/asato425/scikit-learn",
-        # },
-        # "java": {
-        #     1: "https://github.com/asato425/java-design-patterns",
-        #     #2: "https://github.com/asato425/spring-boot", # ファイル構造のトークン制限
-        #     #3: "https://github.com/asato425/elasticsearch", # ファイル構造のトークン制限
-        #     4: "https://github.com/asato425/Java-1",
-        #     #5: "https://github.com/asato425/spring-framework",# ファイル構造のトークン制限
-        #     6: "https://github.com/asato425/guava",
-        #     7: "https://github.com/asato425/RxJava",
-        #     8: "https://github.com/asato425/termux-app",
-        #     #9: "https://github.com/asato425/dbeaver", # ファイル構造のトークン制限
-        #      10: "https://github.com/asato425/jadx",
-        #     #11: "https://github.com/asato425/dubbo", # ファイル構造のトークン制限
-        #     12: "https://github.com/asato425/NewPipe",
-        #     13: "https://github.com/asato425/glide",
-        #     14: "https://github.com/asato425/netty",
-        #     15: "https://github.com/asato425/easyexcel",
-        #     #16: "https://github.com/asato425/zxing", # unknown errorsによる失敗
-        #     17: "https://github.com/asato425/nacos",
-        #     18: "https://github.com/asato425/WxJava",
-        #     #19: "https://github.com/asato425/kafka", # ファイル構造のトークン制限
-        #     #20: "https://github.com/asato425/keycloak", # ファイル構造のトークン制限
-        #     21: "https://github.com/asato425/xxl-job",
-        #     22: "https://github.com/asato425/canal",
-        #     23: "https://github.com/asato425/spring-cloud-alibaba",
-        # },
-        # "javascript": {
-        #     1: "https://github.com/asato425/javascript-algorithms",
-        #     2: "https://github.com/asato425/javascript",
-        #     3: "https://github.com/asato425/axios",
-        #     #4: "https://github.com/asato425/create-react-app", # ワークフロー実行の待機でタイムアウト
-        #     5: "https://github.com/asato425/github-readme-stats",
-        #     6: "https://github.com/asato425/express",
-        #     #8: "https://github.com/asato425/webpack", # ファイル構造のトークン制限
-        #     9: "https://github.com/asato425/lodash",
-        #     10: "https://github.com/asato425/uBlock",
-        #     11: "https://github.com/asato425/jquery",
-        #     12: "https://github.com/asato425/html5-boilerplate",
-        #     #13: "https://github.com/asato425/prettier", # ファイル構造のトークン制限
-        #     14: "https://github.com/asato425/anything-llm",
-        #     15: "https://github.com/asato425/dayjs",
-        #     16: "https://github.com/asato425/serverless",
-        #     17: "https://github.com/asato425/htmx",
-        #     18: "https://github.com/asato425/meteor",
-        #     #19: "https://github.com/asato425/parcel", # ファイル構造のトークン制限
-        #     20: "https://github.com/asato425/Leaflet",
-        # },
+        "python": {
+            1: "https://github.com/asato425/public-apis",
+            2: "https://github.com/asato425/Python-1",
+            3: "https://github.com/asato425/stable-diffusion-webui", 
+            #4: "https://github.com/asato425/transformers", ワークフロー実行の待機でタイムアウト
+            5: "https://github.com/asato425/youtube-dl",
+            6: "https://github.com/asato425/yt-dlp",
+            7: "https://github.com/asato425/langchain-1",
+            8: "https://github.com/asato425/ComfyUI",
+            9: "https://github.com/asato425/fastapi",
+            #10: "https://github.com/asato425/whisper", # ワークフロー実行の待機でタイムアウト
+            #11: "https://github.com/asato425/django", #ファイル構造のトークン制限
+            12: "https://github.com/asato425/markitdown",
+            #13: "https://github.com/asato425/core",# ファイル構造のトークン制限
+            14: "https://github.com/asato425/models",
+            15: "https://github.com/asato425/browser-use",
+            16: "https://github.com/asato425/flask",
+            17: "https://github.com/asato425/sherlock",
+            #18: "https://github.com/asato425/gpt_academic",# push　失敗
+            19: "https://github.com/asato425/gpt4free",
+            20: "https://github.com/asato425/scikit-learn",
+        },
+        "java": {
+            1: "https://github.com/asato425/java-design-patterns",
+            #2: "https://github.com/asato425/spring-boot", # ファイル構造のトークン制限
+            #3: "https://github.com/asato425/elasticsearch", # ファイル構造のトークン制限
+            4: "https://github.com/asato425/Java-1",
+            #5: "https://github.com/asato425/spring-framework",# ファイル構造のトークン制限
+            6: "https://github.com/asato425/guava",
+            7: "https://github.com/asato425/RxJava",
+            8: "https://github.com/asato425/termux-app",
+            #9: "https://github.com/asato425/dbeaver", # ファイル構造のトークン制限
+             10: "https://github.com/asato425/jadx",
+            #11: "https://github.com/asato425/dubbo", # ファイル構造のトークン制限
+            12: "https://github.com/asato425/NewPipe",
+            13: "https://github.com/asato425/glide",
+            14: "https://github.com/asato425/netty", # ログにoutofmemoryエラーが出るがこれはエラーではないが、今の実装ではエラーと認識してしまうため無理
+            15: "https://github.com/asato425/easyexcel",
+            #16: "https://github.com/asato425/zxing", # unknown errorsによる失敗
+            17: "https://github.com/asato425/nacos",
+            18: "https://github.com/asato425/WxJava",
+            #19: "https://github.com/asato425/kafka", # ファイル構造のトークン制限
+            #20: "https://github.com/asato425/keycloak", # ファイル構造のトークン制限
+            21: "https://github.com/asato425/xxl-job",
+            22: "https://github.com/asato425/canal",
+            23: "https://github.com/asato425/spring-cloud-alibaba",
+        },
+        "javascript": {
+            1: "https://github.com/asato425/javascript-algorithms",
+            2: "https://github.com/asato425/javascript",
+            3: "https://github.com/asato425/axios",
+            #4: "https://github.com/asato425/create-react-app", # ワークフロー実行の待機でタイムアウト
+            5: "https://github.com/asato425/github-readme-stats",
+            6: "https://github.com/asato425/express",
+            #8: "https://github.com/asato425/webpack", # ファイル構造のトークン制限
+            9: "https://github.com/asato425/lodash",
+            10: "https://github.com/asato425/uBlock",
+            11: "https://github.com/asato425/jquery",
+            12: "https://github.com/asato425/html5-boilerplate",
+            #13: "https://github.com/asato425/prettier", # ファイル構造のトークン制限
+            14: "https://github.com/asato425/anything-llm",
+            15: "https://github.com/asato425/dayjs",
+            16: "https://github.com/asato425/serverless", #これはプロジェクト側の問題なのでエラー回避不能
+            17: "https://github.com/asato425/htmx",
+            18: "https://github.com/asato425/meteor",
+            #19: "https://github.com/asato425/parcel", # ファイル構造のトークン制限
+            20: "https://github.com/asato425/Leaflet",
+        },
         
     }
+    result = {}
     for language, repos in language_repo_dict.items():
-        print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
-        repositories_to_evaluate = {i: url for i, url in repos.items()}
-        #states = evaluate_multiple(repositories_to_evaluate, language)
-        evaluate_multiple(repositories_to_evaluate, language)
-        print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
-
+        # print(f"\n\n########## {language} のリポジトリの評価を開始 ##########")
+        # repositories_to_evaluate = {i: url for i, url in repos.items()}
+        # #states = evaluate_multiple(repositories_to_evaluate, language)
+        # evaluate_multiple(repositories_to_evaluate, language)
+        # print(f"########## {language} のリポジトリの評価が完了 ##########\n\n")
+        result[language] = []
+        repos_list = [url for i, url in repos.items()]
+        branch_list = ["work_gpt-5-mini", "work_gpt-5-mini_t_0", "work_gpt-5-mini_t_05", "work_gpt-5-mini_t_5", "work_gpt-5-mini_t_1"]
+        for repo_url in repos_list:
+            word_count_list = yml_file_count_words(repo_url, branch_list)
+            result[language].append(word_count_list)
     #delete_remote_repo(language_repo_dict) # フォークしたリポジトリを削除する場合はコメントアウトを外す
-    
+        for language, counts in result.items():
+            log("info", f"{language} リポジトリの {YML_FILE_NAME} の単語数一覧: {counts}")
     # 終了時間の記録とログ出力
     elapsed = time.time() - start_time
     log("info", f"実験実行時間: {elapsed:.2f}秒")
@@ -308,13 +337,13 @@ def main():
 # poetry run python src/research/evaluation/evaluation.py
 if __name__ == "__main__":
     MODEL_NAME = "gpt-5-mini"
-    TEMPERATURE = 1.0
-    WORK_REF = "work_gpt-5-mini_t_1"  # 作業用ブランチ名
+    TEMPERATURE = 0.5
+    WORK_REF = "work_gpt-5-mini_loop_20"  # 作業用ブランチ名
     RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
     RUN_WORKFLOW_GENERATOR = True
     RUN_LINTER = True # RQ4で変更する条件
     RUN_WORKFLOW_EXECUTER = True # RQ4で変更する条件
-    RUN_EXPLANATION_GENERATOR = True
+    RUN_EXPLANATION_GENERATOR = False # RQ4では時間やコストは見ないからこれfalseにする
 
     # 細かい実行制御フラグ
     RUN_ACTIONLINT = True
@@ -323,13 +352,60 @@ if __name__ == "__main__":
     GENERATE_WORKFLOW_REQUIRED_FILES = True # RQ4で変更する条件
     GENERATE_BEST_PRACTICES = True # RQ4で変更する条件
     BEST_PRACTICES_ENABLE_REUSE = True
-    LOOP_COUNT_MAX = 10 # ワークフローのループ回数の上限
-    main()
+    LOOP_COUNT_MAX = 20 # ワークフローのループ回数の上限
+    #main()
+    python_list = [[289, 200, 202], [270, 359, 292], [399, 437, 501], [350, 448, 292], [301, 253, 256], [383, 477, 317], [477, 0, 272], [423, 243, 452], [392, 387, 246], [614, 252, 770], [280, 250, 316], [312, 372, 197], [313, 215, 398], [491, 453, 399], [287, 396, 266]]
+    java_list = [[214, 216, 485], [169, 185, 482], [180, 402, 221], [268, 428, 409], [368, 726, 887], [343, 334, 218], [175, 171, 284], [439, 299, 316], [380, 389, 257], [165, 180, 191], [567, 192, 309], [499, 433, 547], [208, 144, 264], [363, 398, 464], [215, 346, 629]]
+    javascript_list = [[156, 115, 111], [142, 403, 264], [171, 194, 538], [108, 341, 166], [158, 131, 229], [267, 235, 418], [372, 400, 249], [633, 193, 374], [152, 135, 166], [348, 358, 182], [194, 186, 194], [703, 383, 630], [339, 311, 304], [285, 477, 734], [147, 144, 172]]
     
-# TODO:RQ4は
-# - 主要ファイル →これは実行する
-# - ベストプラクティス →これは実行する
-# - Lint実行  →これは実行する
-# - ワークフロー実行  →これは実行しない、今までの結果で最初のワークフローで実行成功しているものはsuccess、それ以外はyml_errorsにする
-# - ループなし → これは今までの結果で修正なしで成功していればsuccess、それ以外はyml_errorsにする
+    print("python yml word counts:")
+    num0 = 0
+    sum0 = 0
+    num5 = 0
+    sum5 = 0
+    num1 = 0
+    sum1 = 0
+    for t in python_list:
+        if t[0] != 0:
+            num0 += 1
+            sum0 += t[0]
+        if t[1] != 0:
+            num5 += 1
+            sum5 += t[1]
+        if t[2] != 0:
+            num1 += 1
+            sum1 += t[2]
+    print(f"temp0 Average: {sum0 / num0 if num0 > 0 else 0}")
+    print(f"temp05 Average: {sum5 / num5 if num5 > 0 else 0}")
+    print(f"temp1 Average: {sum1 / num1 if num1 > 0 else 0}")
     
+    print("java yml word counts:")
+    for t in java_list:
+        if t[0] != 0:
+            num0 += 1
+            sum0 += t[0]
+        if t[1] != 0:
+            num5 += 1
+            sum5 += t[1]
+        if t[2] != 0:
+            num1 += 1
+            sum1 += t[2]
+    print(f"temp0 Average: {sum0 / num0 if num0 > 0 else 0}")
+    print(f"temp05 Average: {sum5 / num5 if num5 > 0 else 0}")
+    print(f"temp1 Average: {sum1 / num1 if num1 > 0 else 0}")
+    
+    print("javascript yml word counts:")
+    for t in javascript_list:
+        if t[0] != 0:
+            num0 += 1
+            sum0 += t[0]
+        if t[1] != 0:
+            num5 += 1
+            sum5 += t[1]
+        if t[2] != 0:
+            num1 += 1
+            sum1 += t[2]
+    print(f"temp0 Average: {sum0 / num0 if num0 > 0 else 0}")
+    print(f"temp05 Average: {sum5 / num5 if num5 > 0 else 0}")
+    print(f"temp1 Average: {sum1 / num1 if num1 > 0 else 0}")
+# TODO: condition_experiment()を変えてからやるように
