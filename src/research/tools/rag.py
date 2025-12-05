@@ -6,13 +6,16 @@ from typing import Any, Callable
 import os
 from langchain_community.retrievers import TavilySearchAPIRetriever
 from research.log_output.log import log
+from research.tools.llm import LLMTool
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 class RAGTool:
     """
     RAG（Retrieval-Augmented Generation）関連の処理をまとめたクラス。
     WebやGitHubなどから情報を取得し、LLMに渡すための構造化データを生成する。
     """
-    def __init__(self, embedding_model: str = "gemini"):
+    def __init__(self, embedding_model: str = "gpt"):
         self.embedding_model = embedding_model
 
     def file_filter_factory(self, allow_exts=None, deny_exts=None, allow_all=False):
@@ -146,3 +149,35 @@ class RAGTool:
         retriever = TavilySearchAPIRetriever(k=max_results)
         log("info", "Tavilyのretrieverを作成しました。")
         return retriever
+    
+    def generate_query(error_text: str):
+        
+        llm = LLMTool()
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "あなたはGitHub Actionsのエキスパートです。"),
+            ("human", f"以下のエラー内容をもとに、このエラーを解決するための検索クエリを生成してください\n【エラー内容】\n{error_text}")
+        ])
+        chain = prompt | llm.create_model(model_name="gpt-5-mini") | StrOutputParser()
+        return chain.invoke({"error": error_text})
+    
+    def summarize_web_info(query: str, web_info: str):
+        llm = LLMTool()
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "あなたはGitHub Actionsのエキスパートです。"),
+            ("human", f"以下の情報をもとに{query}に関する検索結果を要約してください。Webページにそのような情報が含まれていない場合は、Noneを出力してください。\n【検索結果】\n{web_info}")
+        ])
+        chain = prompt | llm.create_model(model_name="gpt-5-mini") | StrOutputParser()
+        return chain.invoke({"web_info": web_info, "query": query})
+# poetry run python src/research/tools/rag.py
+if __name__ == "__main__":
+    rag = RAGTool(embedding_model="gpt")
+    error = "some error log"
+    query = rag.generate_query(error)
+    search_docs = rag.rag_tavily.retriever.invoke(query)
+    web_info = "\n\n".join([doc.page_content for doc in search_docs])
+    web_summary = rag.summarize_web_info(query, web_info)
+
+    print("【検索結果】")
+    print(web_info)
+    print("【要約結果】")
+    print(web_summary)
