@@ -128,10 +128,10 @@ class WorkflowGenerator:
             best_practices = "なし"
         
         if state.generate_workflow_required_files:
-            log("info", "主要ファイルを取得します")
+            log("info", "主要ファイルの情報を取得します")
             workflow_required_files = f"{'\n'.join([f'ファイル名：{file.name}\nパス：{file.path}\n内容：{file.parse_content}\n' for file in state.workflow_required_files])}\n"
         else:
-            log("info", "主要ファイルの取得はスキップされました")
+            log("info", "主要ファイルの情報の取得はスキップされました")
             workflow_required_files = "なし"
         model = llm.create_model(
             model_name=self.model_name, 
