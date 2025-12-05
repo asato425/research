@@ -60,7 +60,7 @@ class GitHubRepoParser:
                 local_path=local_path,
                 branch_name=state.work_ref
             )
-        if create_branch_result.status != "success":
+        if create_branch_result.status != "success" and create_branch_result.status != "exists":
             log("error", "作業用ブランチの作成に失敗したのでプログラムを終了します")
             return {
                 "finish_is": True,
