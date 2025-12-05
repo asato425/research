@@ -363,11 +363,12 @@ class GitHubTool:
         # 現在あるブランチ名を確認し、すでに存在する場合はそのまま成功を返す
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=local_path, check=True)
-            result = RepoOpResult(status="success", message=f"{branch_name}ブランチはすでに存在します")
+            result = RepoOpResult(status="exists", message=f"{branch_name}ブランチはすでに存在します")
         except subprocess.CalledProcessError:
             try:
                 subprocess.run(["git", "checkout", "-b", branch_name], cwd=local_path, check=True)
                 result = RepoOpResult(status="success", message=f"{branch_name}ブランチを作成しました")
+                #result = RepoOpResult(status="success", message=f"{branch_name}ブランチを作成しました（実験のため実際には作成していません）")
             except subprocess.CalledProcessError as e:
                 result = RepoOpResult(status="error", message=str(e))
         except Exception as e:
@@ -542,6 +543,42 @@ class GitHubTool:
         log(result.status, result.message)
         return result
 
+    # 特定のファイルの単語数を数える関数
+    def count_words_in_file(self, local_path: str, relative_path: str) -> RepoInfoResult:
+        """
+        指定したファイルの単語数を数える。
+
+        Args:
+            local_path (str): 対象リポジトリのローカルパス
+            relative_path (str): 単語数を数えたいファイルのパス（リポジトリルートからの相対パス）
+
+        Returns:
+            RepoInfoResult:
+                status (str): "success" または "error" など、処理結果のステータス
+                info (dict|None): {"file_path": ファイルパス, "word_count": 単語数}
+                message (str): 実行結果の説明メッセージ
+        """
+        file_path = os.path.join(local_path, relative_path)
+        if not os.path.exists(file_path):
+            info = {"file_path": file_path, "word_count": 0}
+            result = RepoInfoResult(status="not_found", info=info, message=f"{file_path} は存在しないため単語数を数えられません。")
+            log(result.status, result.message)
+            return result
+        try:
+            with open(file_path, "r") as f:
+                content = f.read()
+            # 内容を行ごとに分割して、#で始まるものはコメントのため除外したい
+            lines = content.splitlines()
+            non_comment_lines = [line for line in lines if not line.strip().startswith("#")]
+            word_count = sum(len(line.split()) for line in non_comment_lines)
+            info = {"file_path": file_path, "word_count": word_count}
+            result = RepoInfoResult(status="success", info=info, message=f"{file_path}の単語数を数えました")
+        except Exception as e:
+            info = {"file_path": file_path, "word_count": 0}
+            result = RepoInfoResult(status="error", info=info, message=str(e))
+        log(result.status, result.message)
+        return result
+    
     def get_file_tree(self, local_path: str) -> RepoInfoResult:
         """
         指定したローカルリポジトリのファイルツリー情報を取得する。
