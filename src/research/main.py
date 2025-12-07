@@ -5,9 +5,9 @@ import argparse
 # ノードの実行制御フラグ
 RUN_GITHUB_REPO_PARSER = True # ここだけはテストでもTrueにする(generatorでFalseでもコミットプッシュなどするため)
 RUN_WORKFLOW_GENERATOR = True
-RUN_LINTER = False
-RUN_WORKFLOW_EXECUTER = False
-RUN_EXPLANATION_GENERATOR = False
+RUN_LINTER = True
+RUN_WORKFLOW_EXECUTER = True
+RUN_EXPLANATION_GENERATOR = True
 
 # 細かい実行制御フラグ
 RUN_ACTIONLINT = True
@@ -21,13 +21,13 @@ BEST_PRACTICES_ENABLE_REUSE = True
 """
 MODEL_NAMEには"gemini-2.5-flash"、"gemini-2.5-pro"、"gpt-4"、"gpt-5"、"claude"を指定できます。
 """
-MODEL_NAME = "gpt-5"
-TEMPERATURE = 0.0
+MODEL_NAME = "gpt-5-mini"
+TEMPERATURE = 0.5
 
 # コマンドライン引数のデフォルト値
 WORK_REF = "work/"+MODEL_NAME  # 作業用ブランチ名
 YML_FILE_NAME = "ci.yml" # 生成されるYAMLファイル名
-MAX_REQUIRED_FILES = 5 # ワークフロー生成に必要な主要ファイルの最大数
+MAX_REQUIRED_FILES = 10 # ワークフロー生成に必要な主要ファイルの最大数
 LOOP_COUNT_MAX = 10 # ワークフローのループ回数の上限
 BEST_PRACTICE_NUM = 10 # 言語固有のベストプラクティスの数
 
@@ -124,27 +124,4 @@ def main():
 # 実行例）
 # poetry run python  src/research/main.py --repo_url "https://github.com/asato425/test"
 if __name__ == "__main__":
-    #main()
-    from research.tools.github import GitHubTool
-    from research.tools.parser import ParserTool
-    github = GitHubTool()
-    parser = ParserTool()
-    result1 = github.get_latest_workflow_logs("https://github.com/asato425/NewPipe", "621e97305472fa808fdf51134ac6f121b0ac1951").failure_reason
-    result2 = github.get_latest_workflow_logs_new("https://github.com/asato425/NewPipe", "621e97305472fa808fdf51134ac6f121b0ac1951").failure_reason
-    print("Old_num:", len(result1))
-    print("New_num:", len(result2))
-    # result1 = parser.remove_timestamps(result1)
-    # result2 = parser.remove_timestamps(result2)
-    # print("Old_num:", len(result1))
-    # print("New_num:", len(result2))
-    # result1 = parser.extract_error_context(result1, 0)
-    # result2 = parser.extract_error_context(result2, 0)
-    # print("Old_num:", len(result1))
-    # print("New_num:", len(result2))
-    # resultをファイルに保存したい
-    with open("old_log.txt", "w") as f:
-        f.write(result1)
-    with open("new_log.txt", "w") as f:
-        f.write(result2)
-    
-    #print(result2)
+    main()
