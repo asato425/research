@@ -1,6 +1,6 @@
 # research
 
-## Poetryの利用方法
+## 利用方法
 
 ### 1. Poetryのインストール
 
@@ -34,29 +34,7 @@ poetry version patch   # パッチバージョンを+1
 poetry version minor   # マイナーバージョンを+1
 poetry version major   # メジャーバージョンを+1
 ```
-
-### 7. テストの実行
-
-```bash
-poetry run pytest
-```
-
-### 8. requirements.txtの生成（必要な場合）
-
-```bash
-poetry export -f requirements.txt --output requirements.txt
-```
-
----
-
 詳細は[Poetry公式ドキュメント](https://python-poetry.org/docs/)も参照してください。
-
-## テストの実行方法
-```shell
-poetry run pytest tests/test_github.py # 特定のテストファイルの実行
-
-poetry run pytest tests/ # フォルダ内の全てのテストを実行
-```
 
 ## 必要なインストールなど
 ```shell
@@ -74,13 +52,28 @@ touch .env
 # GITHUB_TOKEN=********
 # # GPTの環境変数
 # OPENAI_API_KEY= "******"
+
+##ここからは任意
 # #Gemini の環境変数
 # GOOGLE_API_KEY=******* ※ダブルクォーテーションで囲まないでください
 # #Anthropic の環境変数
 # ANTHROPIC_API_KEY="******"
-
 ```
+gpt-5-mini以外で利用したい場合`src/research/main.py`のMODEL_NAME,TEMPERATUREと`src/research/tools/llm.py`の`create_model`関数の`models`にモデルを追加してください。
 
 
 ## best_practices
-- 本来LLMに生成させるがコスト削減のためGPT-5-miniで生成させたものを使い回す
+- 本来LLMに生成させるがコスト削減のためGPT-5で生成させたものを使い回すよう設定しています。
+- この設定を無効にしたい場合は、`src/research/main.py`の`BEST_PRACTICES_ENABLE_REUSE`を`False`に設定してください。
+```python
+BEST_PRACTICES_ENABLE_REUSE = False
+```
+
+## 実行方法
+```bash
+# 実行方法:
+poetry run python src/research/main.py --repo_url "リポジトリのURL" --work_ref "作業用のブランチ名" --yml_file_name "生成されるYAMLファイル名" --max_required_files 5 --loop_count_max 5 --lint_loop_count_max 3 --best_practice_num 10
+# --repo_urlのみ必須、他は任意
+# 実行例）
+poetry run python  src/research/main.py --repo_url "https://github.com/asato425/test"
+```
