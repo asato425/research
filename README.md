@@ -71,9 +71,10 @@ BEST_PRACTICES_ENABLE_REUSE = False
 
 ## 実行方法
 ```bash
-# 実行方法:
+# まず、
+# 実行方法:src/research/main.pyの実行制御フラグなどの設定値(6~35行)を確認してください。初期値では誤作動によりLLMが利用されないよう、Falseに設定しています。利用したい場合はTrueに修正してください。
 poetry run python src/research/main.py --repo_url "リポジトリのURL" --work_ref "作業用のブランチ名" --yml_file_name "生成されるYAMLファイル名" --max_required_files 5 --loop_count_max 5 --lint_loop_count_max 3 --best_practice_num 10
-# --repo_urlのみ必須、他は任意
+# --repo_urlのみ必須、他は任意(src/research/main.pyの28~32行目でも設定可能)
 # 実行例）
 poetry run python  src/research/main.py --repo_url "https://github.com/asato425/test"
 ```
